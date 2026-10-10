@@ -230,7 +230,7 @@ function sheetHTML(){
   var s=S.settings,c=cfg();
   return '<div class="sheetbg" data-act="closesheet"><div class="sheet" data-stop="1" style="max-height:92%;overflow-y:auto"><div class="spread"><p class="day-t">Settings</p></div>'+
     '<div><p class="lbl">GEMINI API KEY</p><input id="gkey" class="in" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="'+(c.key?'Key save hai (badalne ke liye nayi paste karein)':'AIza... yahan paste karein')+'"></div>'+
-    '<div><p class="lbl">GEMINI MODEL</p><input id="gmodel" class="in" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" value="'+esc(c.model||"gemini-2.5-flash")+'"></div>'+
+    '<div><p class="lbl">GEMINI MODEL</p><input id="gmodel" class="in" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" value="'+esc(c.model||DEFAULT_MODEL)+'"></div>'+
     '<button class="btn primary wide" data-act="savegem">Save karein</button>'+
     '<div><p class="lbl">MATLAB KIS ZUBAAN MEIN</p><div class="seg"><button data-act="setscript" data-v="roman" class="'+(s.script==="roman"?"on":"")+'">Roman Urdu</button><button data-act="setscript" data-v="urdu" class="'+(s.script==="urdu"?"on":"")+'">اردو</button></div></div>'+
     '<p class="hint" style="margin:0">Key aur saara data sirf is phone mein save hota hai. Comments seedhe Google Gemini ko jate hain.</p>'+
@@ -249,46 +249,76 @@ function render(){
 }
 
 /* ---------- Gemini ---------- */
+var DEFAULT_MODEL="gemini-3.8-flash";
 var gseq=0,gpend={};
 window.__gem=function(id,code,txt){var p=gpend[id];if(!p)return;delete gpend[id];p.done(code,txt);};
 function cfg(){try{return JSON.parse(localStorage.getItem("commentdesk.gem")||"{}");}catch(e){return {};}}
 function saveCfg(c){try{localStorage.setItem("commentdesk.gem",JSON.stringify(c));}catch(e){}}
-function gemini(prompt,opts){
-  opts=opts||{};
-  var c=cfg(),key=(c.key||"").trim(),model=(c.model||"gemini-2.5-flash").trim();
-  return new Promise(function(resolve,reject){
-    if(!key){reject({code:"nokey"});return;}
-    if(!/^[A-Za-z0-9._-]+$/.test(model)){reject({code:"badmodel"});return;}
-    var gc={temperature:0.9,responseMimeType:"application/json"};
-    if(/2\.5-flash/.test(model))gc.thinkingConfig={thinkingBudget:0};
-    var body=JSON.stringify({contents:[{role:"user",parts:[{text:prompt}]}],generationConfig:gc});
-    var finished=false;
-    if(opts.signal){opts.signal.addEventListener("abort",function(){if(finished)return;finished=true;reject({code:"cancelled"});});}
-    function handle(code,txt){
-      if(finished)return;finished=true;
-      var j=null;try{j=JSON.parse(txt);}catch(e){}
-      if(code===200&&j){
-        var t="";try{t=j.candidates[0].content.parts.map(function(p){return p.text||"";}).join("");}catch(e){}
-        if(t)resolve({text:t});else reject({code:"empty"});return;
-      }
-      if(code===429)reject({code:"rate"});
-      else if(code===400||code===401||code===403){var m=(j&&j.error&&j.error.message)||"";reject({code:(code!==400||/API key|API_KEY/i.test(m))?"badkey":"server",message:m});}
-      else if(code===404)reject({code:"badmodel"});
-      else if(code<=0)reject({code:"net"});
-      else reject({code:"server"});
-    }
-    if(window.AndroidBridge&&window.AndroidBridge.gemini){
-      var id=++gseq;gpend[id]={done:handle};window.AndroidBridge.gemini(id,model,key,body);
-    }else{
-      fetch("https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent",{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":key},body:body})
-        .then(function(r){return r.text().then(function(t){handle(r.status,t);});}).catch(function(){handle(-1,"");});
-    }
+function apiCall(method,path,key,bodyObj,cb){
+  var body=bodyObj?JSON.stringify(bodyObj):"";
+  if(window.AndroidBridge&&window.AndroidBridge.call){
+    var id=++gseq;gpend[id]={done:cb};window.AndroidBridge.call(id,method,path,key,body);return;
+  }
+  var init={method:method,headers:{"Content-Type":"application/json","x-goog-api-key":key}};
+  if(method==="POST")init.body=body;
+  fetch("https://generativelanguage.googleapis.com"+path,init).then(function(r){return r.text().then(function(t){cb(r.status,t);});}).catch(function(){cb(-1,"");});
+}
+function pickModel(key,cb){
+  apiCall("GET","/v1beta/models?pageSize=200",key,null,function(code,txt){
+    var best=null;
+    try{
+      var j=JSON.parse(txt),list=(j.models||[]).filter(function(m){return (m.supportedGenerationMethods||[]).indexOf("generateContent")>=0;}).map(function(m){return m.name.replace(/^models\//,"");});
+      var stable=list.filter(function(n){return /^gemini-\d+(\.\d+)?-flash(-lite)?$/.test(n);});
+      var pool=stable.length?stable:list.filter(function(n){return /^gemini-\d+(\.\d+)?-flash/.test(n)&&!/(image|tts|live|audio|embed|thinking|robotics|computer)/.test(n);});
+      pool.sort(function(x,y){var vx=parseFloat((/gemini-(\d+(?:\.\d+)?)-/.exec(x)||[0,0])[1]),vy=parseFloat((/gemini-(\d+(?:\.\d+)?)-/.exec(y)||[0,0])[1]);if(vx!==vy)return vy-vx;var lx=/lite/.test(x)?1:0,ly=/lite/.test(y)?1:0;return lx-ly;});
+      best=pool[0]||null;
+    }catch(e){}
+    cb(best);
   });
 }
-function copyFor(code){
+function gemini(prompt,opts){
+  opts=opts||{};
+  var c=cfg(),key=(c.key||"").trim(),model=(c.model||DEFAULT_MODEL).trim();
+  return new Promise(function(resolve,reject){
+    if(!key){reject({code:"nokey"});return;}
+    var done=false;
+    if(opts.signal){opts.signal.addEventListener("abort",function(){if(done)return;done=true;reject({code:"cancelled"});});}
+    function fail(code,message){if(done)return;done=true;reject({code:code,message:message||""});}
+    function gen(m,thinking,listed){
+      if(!/^[A-Za-z0-9._-]+$/.test(m)){fail("badmodel");return;}
+      var gc={temperature:0.9,responseMimeType:"application/json"};
+      if(thinking)gc.thinkingConfig={thinkingLevel:"low"};
+      apiCall("POST","/v1beta/models/"+m+":generateContent",key,{contents:[{role:"user",parts:[{text:prompt}]}],generationConfig:gc},function(code,txt){
+        if(done)return;
+        var j=null;try{j=JSON.parse(txt);}catch(e){}
+        var msg=(j&&j.error&&j.error.message)||"";
+        if(code===200&&j){
+          var t="";try{t=j.candidates[0].content.parts.map(function(p){return p.text||"";}).join("");}catch(e){}
+          if(!t){fail("empty",(j.promptFeedback&&j.promptFeedback.blockReason)||"");return;}
+          if(m!==c.model){c.model=m;saveCfg(c);}
+          done=true;resolve({text:t});return;
+        }
+        if(code===400&&thinking&&/think/i.test(msg)){gen(m,false,listed);return;}
+        if((code===404||/no longer available|not found|not supported/i.test(msg)&&code===400)&&!listed){
+          pickModel(key,function(best){if(done)return;if(best&&best!==m)gen(best,/gemini-3/.test(best),true);else fail("badmodel",msg);});
+          return;
+        }
+        if(code===429)fail("rate",msg);
+        else if(code===401||code===403||(code===400&&/API key|API_KEY/i.test(msg)))fail("badkey",msg);
+        else if(code===404)fail("badmodel",msg);
+        else if(code<=0)fail("net");
+        else fail("server",msg);
+      });
+    }
+    gen(model,/gemini-3/.test(model),false);
+  });
+}
+function copyFor(code,detail){
   if(code==="nokey"||code==="badkey")S.sheet=true;
-  var map={nokey:"Pehle Settings mein Gemini API key daalein.",badkey:"Gemini key sahi nahi lag rahi. Settings mein check karein.",badmodel:"Model ka naam sahi nahi. Settings mein gemini-2.5-flash likhein.",rate:"Gemini ne limit laga di. Thori der baad dobara try karein.",net:"Internet nahi chal raha ya Gemini tak nahi pohnch saka.",empty:"Gemini ne khali jawab diya. Dobara dabayein.",server:"Gemini mein masla hai. Thori der baad try karein.",cancelled:""};
-  return code in map?map[code]:"Kuch masla aaya. Dobara try karein.";
+  var map={nokey:"Pehle Settings mein Gemini API key daalein.",badkey:"Gemini key sahi nahi lag rahi. Settings mein check karein.",badmodel:"Model nahi mila. App khud naya model dhoond raha tha, par nahi mila. Key check karein.",rate:"Gemini ne limit laga di. Thori der baad dobara try karein.",net:"Internet nahi chal raha ya Gemini tak nahi pohnch saka.",empty:"Gemini ne khali jawab diya. Dobara dabayein.",server:"Gemini mein masla hai. Thori der baad try karein.",cancelled:""};
+  var base=code in map?map[code]:"Kuch masla aaya. Dobara try karein.";
+  if(detail&&code!=="cancelled"&&code!=="nokey")base+=" ("+String(detail).slice(0,140)+")";
+  return base;
 }
 function langRule(){return S.settings.script==="urdu"?"Urdu script (اردو)":"Roman Urdu (Urdu written in English letters, the way people text in Pakistan)";}
 var REPLY_RULES="Reply rules: write the reply the account owner will post under the comment. Use the same language as the commenter (English by default; simple Hinglish for Hindi or Hinglish; Roman Urdu for Urdu). Maximum 15 words, one sentence. Sound like a real person typing on a phone: casual, contractions, no formal praise. Never use phrases like 'Great point', 'Absolutely', 'Thanks for sharing'. No hashtags, no links, no em-dashes. No emoji unless the commenter used one, and then at most one. React to the specific words of the comment. When it fits, end with a short question that keeps the thread going. Never claim personal facts (age, country, job, income, results, credentials) and never invent facts or numbers; if a factual question is beyond what is known, give a modest opinion instead.";
@@ -315,7 +345,7 @@ function onSend(){
     });
     S.draft="";saveThread(p);S.scrollEnd=true;
   }).catch(function(e){
-    S.err=(e&&e.message==="parse")?"Jawab samajh nahi aaya. Dobara dabayein.":copyFor(e&&e.code);
+    S.err=(e&&e.message==="parse")?"Jawab samajh nahi aaya. Dobara dabayein.":copyFor(e&&e.code,e&&e.message);
   }).then(function(){S.busy=false;ctl=null;render();});
 }
 function onRegen(id){
@@ -328,7 +358,7 @@ function onRegen(id){
   sampleFn(prompt,{cache:false,signal:ctl.signal,temperature:0}).then(function(r){
     var o=parseJSON(r.text,"{","}");
     it.reply=String(o.reply||it.reply);it.skip=false;saveThread(p);
-  }).catch(function(e){S.err=(e&&e.message==="parse")?"Jawab samajh nahi aaya. Dobara dabayein.":copyFor(e&&e.code);}).then(function(){S.busy=false;ctl=null;render();});
+  }).catch(function(e){S.err=(e&&e.message==="parse")?"Jawab samajh nahi aaya. Dobara dabayein.":copyFor(e&&e.code,e&&e.message);}).then(function(){S.busy=false;ctl=null;render();});
 }
 
 /* ---------- actions ---------- */

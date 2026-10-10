@@ -79,6 +79,47 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void call(final int id, final String method, final String path, final String key, final String body) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    int code = 0;
+                    String out = "";
+                    try {
+                        if (path == null || !path.startsWith("/v1beta/") || path.contains("..")) throw new Exception("bad path");
+                        URL u = new URL("https://generativelanguage.googleapis.com" + path);
+                        HttpURLConnection c = (HttpURLConnection) u.openConnection();
+                        boolean post = "POST".equals(method);
+                        c.setRequestMethod(post ? "POST" : "GET");
+                        c.setConnectTimeout(20000);
+                        c.setReadTimeout(90000);
+                        c.setRequestProperty("x-goog-api-key", key);
+                        if (post) {
+                            c.setDoOutput(true);
+                            c.setRequestProperty("Content-Type", "application/json");
+                            OutputStream os = c.getOutputStream();
+                            os.write(String.valueOf(body).getBytes(StandardCharsets.UTF_8));
+                            os.close();
+                        }
+                        code = c.getResponseCode();
+                        out = readAll(code >= 400 ? c.getErrorStream() : c.getInputStream());
+                    } catch (Exception e) {
+                        code = -1;
+                        out = String.valueOf(e.getMessage());
+                    }
+                    final int fcode = code;
+                    final String fout = out;
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            web.evaluateJavascript("window.__gem(" + id + "," + fcode + "," + JSONObject.quote(fout) + ")", null);
+                        }
+                    });
+                }
+            }).start();
+        }
+
+        @JavascriptInterface
         public void gemini(final int id, final String model, final String key, final String body) {
             new Thread(new Runnable() {
                 @Override
