@@ -249,11 +249,12 @@ function footHTML(){
   if(v.name!=="post")return "";
   var h="";
   if(S.err)h+='<div class="err">'+esc(S.err)+'</div>';
-  if(S.busy)h+='<div class="thinking"><span class="spin"></span><span>Soch raha hun...</span><button class="btn" data-act="stop" style="min-height:36px;padding:0 12px;margin-left:auto">Rok dein</button></div>';
+  if(S.busy)h+='<div class="thinking"><span class="spin"></span><span id="stg">Soch raha hun...</span><button class="btn" data-act="stop" style="min-height:36px;padding:0 12px;margin-left:auto">Rok dein</button></div>';
   h+='<textarea class="in" id="draft" rows="2" placeholder="Comment yahan paste karein (kai hon to beech mein khali line)" '+(S.busy?'disabled':'')+'>'+esc(S.draft)+'</textarea>';
   h+='<div class="row" style="margin-top:8px"><button class="btn primary" data-act="send" '+(S.busy?'disabled':'')+' style="flex:1">Samjhao aur reply banao</button></div>';
   return h;
 }
+setInterval(function(){var e=$("#stg");if(e&&S.busy){var sec=S.t0?Math.round((Date.now()-S.t0)/1000):0;e.textContent="Soch raha hun... "+sec+"s"+(S.stage?" ("+S.stage+")":"");}},1000);
 function paintFoot(){var f=$("#foot");var h=footHTML();f.hidden=!h;f.innerHTML=h;var d=$("#draft");if(d)autosize(d,140);}
 function autosize(el,max){el.style.height="auto";el.style.height=Math.min(el.scrollHeight+2,max||9999)+"px";}
 function sheetHTML(){
@@ -262,9 +263,9 @@ function sheetHTML(){
   return '<div class="sheetbg" data-act="closesheet"><div class="sheet" data-stop="1" style="max-height:92%;overflow-y:auto"><div class="spread"><p class="day-t">Settings</p></div>'+
     '<div><p class="lbl">GEMINI API KEY</p><input id="gkey" class="in" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="'+(c.key?'Key save hai (badalne ke liye nayi paste karein)':'AIza... yahan paste karein')+'"></div>'+
     '<div><p class="lbl">GEMINI MODEL</p><input id="gmodel" class="in" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" value="'+esc(c.model||DEFAULT_MODEL)+'"></div>'+
-    '<button class="btn primary wide" data-act="savegem">Save karein</button>'+
+    '<button class="btn primary wide" data-act="savegem">Save karein</button><button class="btn wide" data-act="testgem">Connection test karein</button><p class="hint" id="testout" style="margin:0"></p>'+
     '<div><p class="lbl">MATLAB KIS ZUBAAN MEIN</p><div class="seg"><button data-act="setscript" data-v="roman" class="'+(s.script==="roman"?"on":"")+'">Roman Urdu</button><button data-act="setscript" data-v="urdu" class="'+(s.script==="urdu"?"on":"")+'">اردو</button></div></div>'+
-    '<div class="credit" style="padding:0">Comment Desk &middot; made by <b>Ameer Hamza</b></div><p class="hint" style="margin:0">Key aur saara data sirf is phone mein save hota hai. Comments seedhe Google Gemini ko jate hain.</p>'+
+    '<div class="credit" style="padding:0">Comment Desk '+APP_VER+' &middot; made by <b>Ameer Hamza</b></div><p class="hint" style="margin:0">Key aur saara data sirf is phone mein save hota hai. Comments seedhe Google Gemini ko jate hain.</p>'+
     '<button class="btn wide" data-act="closesheet">Band karein</button></div></div>';
 }
 function render(){
@@ -280,6 +281,7 @@ function render(){
 }
 
 /* ---------- Gemini ---------- */
+var APP_VER="v7";
 var DEFAULT_MODEL="gemini-3.8-flash";
 var gseq=0,gseq2=0,gpend={};
 window.__gem=function(id,code,txt){var p=gpend[id];if(!p)return;delete gpend[id];p.done(code,txt);};
@@ -316,10 +318,11 @@ function gemini(prompt,opts){
     if(opts.signal){opts.signal.addEventListener("abort",function(){if(done)return;done=true;clearTimeout(tmo);reject({code:"cancelled"});});}
     function fail(code,message){if(done)return;done=true;reject({code:code,message:message||""});}
     var tries=0,tmo=null;
-    function arm(m,thinking,listed){clearTimeout(tmo);tmo=setTimeout(function(){if(done)return;if(tries<1){tries++;gen(m,thinking,listed);}else fail("slow");},40000);}
+    function arm(m,thinking,listed){clearTimeout(tmo);tmo=setTimeout(function(){if(done)return;if(tries<1){tries++;gen(m,thinking,listed);}else fail("slow");},30000);}
     function gen(m,thinking,listed){
+      S.stage=m+(tries?" (dobara)":"");
       if(!/^[A-Za-z0-9._-]+$/.test(m)){fail("badmodel");return;}
-      var gc={temperature:0.9,responseMimeType:"application/json"};
+      var gc={temperature:0.9,responseMimeType:"application/json",maxOutputTokens:1500};
       if(thinking)gc.thinkingConfig={thinkingLevel:"minimal"};
       var my=++gseq2;arm(m,thinking,listed);
       apiCall("POST","/v1beta/models/"+m+":generateContent",key,{contents:[{role:"user",parts:[{text:prompt}]}],generationConfig:gc},function(code,txt){
@@ -350,7 +353,7 @@ function gemini(prompt,opts){
 }
 function copyFor(code,detail){
   if(code==="nokey"||code==="badkey")S.sheet=true;
-  var map={nokey:"Pehle Settings mein Gemini API key daalein.",badkey:"Gemini key sahi nahi lag rahi. Settings mein check karein.",badmodel:"Model nahi mila. App khud naya model dhoond raha tha, par nahi mila. Key check karein.",rate:"Gemini ne limit laga di. Thori der baad dobara try karein.",net:"Internet nahi chal raha ya Gemini tak nahi pohnch saka.",empty:"Gemini ne khali jawab diya. Dobara dabayein.",server:"Gemini mein masla hai. Thori der baad try karein.",slow:"Gemini bohot der laga raha hai (40 second). Dobara dabayein, ya Settings mein model badal kar gemini-3.5-flash-lite likhein.",cancelled:""};
+  var map={nokey:"Pehle Settings mein Gemini API key daalein.",badkey:"Gemini key sahi nahi lag rahi. Settings mein check karein.",badmodel:"Model nahi mila. App khud naya model dhoond raha tha, par nahi mila. Key check karein.",rate:"Gemini ne limit laga di. Thori der baad dobara try karein.",net:"Internet nahi chal raha ya Gemini tak nahi pohnch saka.",empty:"Gemini ne khali jawab diya. Dobara dabayein.",server:"Gemini mein masla hai. Thori der baad try karein.",slow:"Gemini ne 30 second tak jawab nahi diya, do dafa koshish ki. Dobara dabayein, ya Settings mein model badal kar gemini-3.5-flash-lite likhein.",cancelled:""};
   var base=code in map?map[code]:"Kuch masla aaya. Dobara try karein.";
   if(detail&&code!=="cancelled"&&code!=="nokey")base+=" ("+String(detail).slice(0,140)+")";
   return base;
@@ -370,7 +373,7 @@ function onSend(){
   if(!sampleFn){S.err="Setup nahi hua.";paintFoot();return;}
   var p=getPost(S.view.day,S.view.post);if(!p)return;
   var parts=raw.split(/\n\s*\n/).map(function(s){return s.trim();}).filter(Boolean).slice(0,15).map(function(s){return s.slice(0,900);});
-  S.busy=true;S.err="";ctl=new AbortController();paintFoot();
+  S.busy=true;S.err="";S.t0=Date.now();ctl=new AbortController();paintFoot();
   sampleFn(buildPrompt(p.text,parts),{cache:false,signal:ctl.signal,temperature:0}).then(function(r){
     var arr=parseJSON(r.text,"[","]");
     p.items=p.items||[];
@@ -387,7 +390,7 @@ function runItem(id,promptFn,apply,toastMsg){
   if(S.busy)return;
   var p=getPost(S.view.day,S.view.post);if(!p)return;
   var it=(p.items||[]).find(function(x){return x.id===id;});if(!it)return;
-  S.busy=true;S.err="";ctl=new AbortController();paintFoot();toast(toastMsg);
+  S.busy=true;S.err="";S.t0=Date.now();ctl=new AbortController();paintFoot();toast(toastMsg);
   sampleFn(promptFn(p,it),{cache:false,signal:ctl.signal}).then(function(r){
     apply(it,parseJSON(r.text,"{","}"));saveThread(p);
   }).catch(function(e){S.err=(e&&e.message==="parse")?"Jawab samajh nahi aaya. Dobara dabayein.":copyFor(e&&e.code,e&&e.message);}).then(function(){S.busy=false;ctl=null;render();});
@@ -455,6 +458,16 @@ document.addEventListener("click",function(e){
   else if(act==="settings"){S.sheet=true;render();}
   else if(act==="closesheet"){S.sheet=false;render();}
   else if(act==="setscript"){S.settings.script=t.getAttribute("data-v");saveSettings();render();}
+  else if(act==="testgem"){
+    var k2=$("#gkey"),m2=$("#gmodel"),c2=cfg(),key2=(k2&&k2.value.trim())||c2.key||"",mod2=(m2&&m2.value.trim())||c2.model||DEFAULT_MODEL,o=$("#testout");
+    if(!key2){o.textContent="Pehle key paste karein.";return;}
+    var t1=Date.now();o.textContent="Test chal raha hai...";
+    apiCall("POST","/v1beta/models/"+mod2+":generateContent",key2,{contents:[{role:"user",parts:[{text:"Say OK"}]}]},function(code,txt){
+      var sec=((Date.now()-t1)/1000).toFixed(1),msg="";try{msg=JSON.parse(txt).error.message;}catch(e){}
+      var o2=$("#testout");if(!o2)return;
+      o2.textContent=(code===200?"OK ✓ ":"Masla (code "+code+") ")+mod2+" - "+sec+"s"+(msg?" - "+msg.slice(0,160):"");
+    });
+  }
   else if(act==="savegem"){var k=$("#gkey"),m=$("#gmodel");var cc=cfg();if(k&&k.value.trim())cc.key=k.value.trim();if(m&&m.value.trim())cc.model=m.value.trim();saveCfg(cc);S.sheet=false;S.err="";render();toast("Save ho gaya");}
 });
 function saveSettings(){try{localStorage.setItem(LS_SET,JSON.stringify(S.settings));}catch(e){}}

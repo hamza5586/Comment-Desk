@@ -91,8 +91,8 @@ public class MainActivity extends Activity {
                         HttpURLConnection c = (HttpURLConnection) u.openConnection();
                         boolean post = "POST".equals(method);
                         c.setRequestMethod(post ? "POST" : "GET");
-                        c.setConnectTimeout(20000);
-                        c.setReadTimeout(90000);
+                        c.setConnectTimeout(10000);
+                        c.setReadTimeout(30000);
                         c.setRequestProperty("x-goog-api-key", key);
                         if (post) {
                             c.setDoOutput(true);
@@ -130,8 +130,8 @@ public class MainActivity extends Activity {
                         URL u = new URL("https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent");
                         HttpURLConnection c = (HttpURLConnection) u.openConnection();
                         c.setRequestMethod("POST");
-                        c.setConnectTimeout(20000);
-                        c.setReadTimeout(90000);
+                        c.setConnectTimeout(10000);
+                        c.setReadTimeout(30000);
                         c.setDoOutput(true);
                         c.setRequestProperty("Content-Type", "application/json");
                         c.setRequestProperty("x-goog-api-key", key);
