@@ -84,6 +84,29 @@ textarea.in:focus,input.in:focus,.reply:focus{outline:2px solid var(--accent);ou
 .spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent);animation:sp .8s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.spin{animation:none}.toast{transition:none}}
+
+.top.hero{padding:16px 10px 18px 16px;background:linear-gradient(135deg,#0F1A20 0%,#10302A 100%);border-bottom:0;border-radius:0 0 22px 22px;color:#fff;gap:12px;box-shadow:0 6px 18px rgba(14,138,102,.18)}
+.top.hero .ib{color:#fff}.top.hero .ib:active{background:rgba(255,255,255,.12)}
+.brand{flex:1;min-width:0;display:flex;align-items:center;gap:12px}
+.brand svg.logo{flex:none;width:48px;height:48px;border-radius:14px;box-shadow:0 0 0 1px rgba(255,255,255,.14)}
+.brand .bt{min-width:0}
+.brand .bn{font-size:21px;font-weight:700;letter-spacing:-.02em;line-height:1.15}
+.brand .by{font-size:12.5px;color:#9FE8CE;font-weight:600;margin-top:2px}
+.top .mini{flex:none;width:26px;height:26px;border-radius:8px;margin:0 2px 0 0}
+.card{box-shadow:0 1px 2px rgba(18,23,29,.05)}
+.badge{flex:none;width:44px;height:44px;border-radius:13px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:17px}
+.dayrow{display:flex;align-items:center;gap:12px}
+.dayrow .tx{flex:1;min-width:0}
+.trans{margin:10px 0 0;padding:9px 11px;border-radius:10px;background:var(--surface);border:1px dashed var(--line)}
+.trans .lbl{margin:0 0 2px}
+.trans p{margin:0;overflow-wrap:anywhere;font-size:15px}.trans p.lbl{font-size:11px;color:var(--accent)}
+.trans p.ur{font-family:var(--font-ur);font-size:17px;line-height:2}
+.modrow{display:flex;gap:8px;margin-top:10px}
+.modrow input{flex:1;min-width:0;min-height:44px;padding:0 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);outline:none}
+.modrow input:focus{outline:2px solid var(--accent);outline-offset:1px}
+.credit{text-align:center;color:var(--muted);font-size:13px;font-weight:600;padding:14px 0 6px}
+.credit b{color:var(--accent)}
+.btn.sm{min-height:36px;padding:0 12px;font-size:14px}
 </style></head><body>
 <div id="app">
   <div class="top" id="top"></div>
@@ -100,13 +123,14 @@ var LS_KEY="commentdesk.v1", LS_SET="commentdesk.settings";
 var $=function(s){return document.querySelector(s)};
 var esc=function(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})};
 var uid=function(){return Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4)};
+var LOGO='<svg class="logo" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" fill="#0F1A20"/><rect x="22" y="26" width="56" height="40" rx="9" fill="#3FD6A1"/><path d="M34 64v14l16-14z" fill="#3FD6A1"/><rect x="31" y="36" width="38" height="4" rx="2" fill="#0F1A20"/><rect x="31" y="47" width="27" height="4" rx="2" fill="#0F1A20"/></svg>';
 var ICON={
   back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
   gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>',
   trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>'
 };
 
-var S={days:[],view:{name:"days"},draft:"",busy:false,err:"",sheet:false,confirm:null,expandPost:false,
+var S={days:[],view:{name:"days"},draft:"",mods:{},busy:false,err:"",sheet:false,confirm:null,expandPost:false,
   settings:{script:"roman",speed:"quick"},sync:"local",storeReady:false,dirty:false};
 var sampleFn=null, ctl=null, dayCol=null, thrCol=null;
 
@@ -155,7 +179,7 @@ function paintSync(){var el=$("#syncdot");if(el){el.className="dot"+(S.sync==="c
 function topHTML(){
   var v=S.view,h="";
   if(v.name==="days"){
-    h='<h1>Comment Desk</h1><button class="ib" data-act="settings" aria-label="Settings">'+ICON.gear+'</button>';
+    h='<div class="brand">'+LOGO+'<div class="bt"><div class="bn">Comment Desk</div><div class="by">Made by Ameer Hamza</div></div></div><button class="ib" data-act="settings" aria-label="Settings">'+ICON.gear+'</button>';
   }else if(v.name==="day"){
     var d=getDay(v.day);
     h='<button class="ib" data-act="back" aria-label="Wapas">'+ICON.back+'</button><h1>'+esc(d?d.name:"Day")+'</h1><button class="ib" data-act="askdelday" aria-label="Din hatayein">'+ICON.trash+'</button>';
@@ -175,9 +199,11 @@ function daysHTML(){
   var h='<button class="btn primary wide" data-act="newday">+ Naya din</button>';
   if(!list.length)h+='<div class="empty">Abhi koi din nahi. Naya din shuru karein.</div>';
   list.forEach(function(d){
-    h+='<button class="card tap" data-act="openday" data-id="'+d.id+'"><div class="spread"><p class="day-t">'+esc(d.name)+'</p><span class="meta">'+esc(fmtDate(d.created))+'</span></div><p class="meta">'+d.posts.length+' posts &middot; '+commentsIn(d)+' comments</p></button>';
+    var dn=(/(\d+)/.exec(d.name)||[0,"•"])[1];
+    h+='<button class="card tap" data-act="openday" data-id="'+d.id+'"><div class="dayrow"><div class="badge">'+esc(dn)+'</div><div class="tx"><div class="spread"><p class="day-t">'+esc(d.name)+'</p><span class="meta">'+esc(fmtDate(d.created))+'</span></div><p class="meta">'+d.posts.length+' posts &middot; '+commentsIn(d)+' comments</p></div></div></button>';
   });
-  h+='<p class="hint"><span id="syncdot" class="dot'+(S.sync==="cloud"?" ok":"")+'"></span><span id="synctxt"></span></p>';
+  h+='<div class="credit">App made by <b>Ameer Hamza</b></div>';
+  h+='<p class="hint" hidden><span id="syncdot" class="dot'+(S.sync==="cloud"?" ok":"")+'"></span><span id="synctxt"></span></p>';
   return h;
 }
 function dayHTML(){
@@ -199,7 +225,12 @@ function itemHTML(it,i){
     h+='<div class="sec"><div class="skipnote">Is par reply na karein (spam ya bekaar lag raha hai).</div></div>';
     h+='<div class="row sec"><button class="btn" data-act="regen" data-id="'+it.id+'">Phir bhi reply banao</button><button class="btn ghost" data-act="askdelitem" data-id="'+it.id+'">Hatayein</button></div>';
   }else{
-    h+='<div class="sec replybox"><p class="lbl">REPLY (badal sakte hain)</p><textarea class="reply" rows="1" data-act-input="reply" data-id="'+it.id+'">'+esc(it.reply)+'</textarea><div class="row"><button class="btn primary" data-act="copy" data-id="'+it.id+'">Copy</button><button class="btn" data-act="regen" data-id="'+it.id+'">Dusra reply</button></div></div>';
+    var ur2=S.settings.script==="urdu";
+    h+='<div class="sec replybox"><p class="lbl">REPLY (English, badal sakte hain)</p><textarea class="reply" rows="1" data-act-input="reply" data-id="'+it.id+'">'+esc(it.reply)+'</textarea><div class="row"><button class="btn primary" data-act="copy" data-id="'+it.id+'">Copy</button><button class="btn" data-act="regen" data-id="'+it.id+'">Dusra reply</button></div>';
+    h+='<div class="trans"><p class="lbl">REPLY KA MATLAB</p><p class="'+(ur2?'ur':'')+'"'+(ur2?' dir="rtl"':'')+'>'+esc(it.rurdu||"(matlab abhi nahi hai, neeche Matlab dikhao dabayein)")+'</p></div>';
+    h+='<div class="row" style="margin-top:8px"><button class="btn sm ghost" data-act="retrans" data-id="'+it.id+'">Matlab dobara dikhao</button></div>';
+    h+='<div class="modrow"><input type="text" data-act-input="mod" data-id="'+it.id+'" value="'+esc(S.mods[it.id]||"")+'" placeholder="AI ko batayein kya badalna hai..." autocomplete="off"><button class="btn primary" data-act="modify" data-id="'+it.id+'">Badlo</button></div>';
+    h+='<p class="hint">Jaise: "chhota karo", "funny banao", "seedha jawab do", "agree mat karo"</p></div>';
     h+='<div class="row sec"><button class="btn ghost" data-act="done" data-id="'+it.id+'">'+(it.done?'Wapas kholein':'Ho gaya')+'</button><button class="btn ghost" data-act="askdelitem" data-id="'+it.id+'">Hatayein</button></div>';
   }
   h+='</article>';
@@ -233,12 +264,12 @@ function sheetHTML(){
     '<div><p class="lbl">GEMINI MODEL</p><input id="gmodel" class="in" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" value="'+esc(c.model||DEFAULT_MODEL)+'"></div>'+
     '<button class="btn primary wide" data-act="savegem">Save karein</button>'+
     '<div><p class="lbl">MATLAB KIS ZUBAAN MEIN</p><div class="seg"><button data-act="setscript" data-v="roman" class="'+(s.script==="roman"?"on":"")+'">Roman Urdu</button><button data-act="setscript" data-v="urdu" class="'+(s.script==="urdu"?"on":"")+'">اردو</button></div></div>'+
-    '<p class="hint" style="margin:0">Key aur saara data sirf is phone mein save hota hai. Comments seedhe Google Gemini ko jate hain.</p>'+
+    '<div class="credit" style="padding:0">Comment Desk &middot; made by <b>Ameer Hamza</b></div><p class="hint" style="margin:0">Key aur saara data sirf is phone mein save hota hai. Comments seedhe Google Gemini ko jate hain.</p>'+
     '<button class="btn wide" data-act="closesheet">Band karein</button></div></div>';
 }
 function render(){
   if(!S.storeReady){$("#main").innerHTML='<div class="empty">Khul raha hai...</div>';return;}
-  $("#top").innerHTML=topHTML();
+  $("#top").innerHTML=topHTML();$("#top").className="top"+(S.view.name==="days"?" hero":"");
   var v=S.view,h="";
   if(v.name==="days")h=daysHTML();else if(v.name==="day")h=dayHTML();else h=postHTML();
   var m=$("#main");m.innerHTML=h;
@@ -321,10 +352,10 @@ function copyFor(code,detail){
   return base;
 }
 function langRule(){return S.settings.script==="urdu"?"Urdu script (اردو)":"Roman Urdu (Urdu written in English letters, the way people text in Pakistan)";}
-var REPLY_RULES="Reply rules: write the reply the account owner will post under the comment. Use the same language as the commenter (English by default; simple Hinglish for Hindi or Hinglish; Roman Urdu for Urdu). Maximum 15 words, one sentence. Sound like a real person typing on a phone: casual, contractions, no formal praise. Never use phrases like 'Great point', 'Absolutely', 'Thanks for sharing'. No hashtags, no links, no em-dashes. No emoji unless the commenter used one, and then at most one. React to the specific words of the comment. When it fits, end with a short question that keeps the thread going. Never claim personal facts (age, country, job, income, results, credentials) and never invent facts or numbers; if a factual question is beyond what is known, give a modest opinion instead.";
+var REPLY_RULES="Reply rules: the reply is posted publicly under the comment, written by the account owner answering the commenter. It must RESPOND to what the commenter said, using the owner's post as context. If the commenter asks a question, ANSWER it directly and concretely (the owner is answering, not asking). If they give an opinion, react to their specific point: agree, disagree politely, or add one short thought. If it is a joke, play along. Do NOT turn the reply into a question back to the commenter, and never use filler like 'what about you?' or 'what do you think?'. Only ask a question if the comment is too unclear to answer. Use the same language as the commenter (English by default; simple Hinglish for Hindi or Hinglish; Roman Urdu for Urdu). Maximum 18 words, one or two short sentences. Sound like a real person typing on a phone: casual, contractions, no formal praise. Never use phrases like 'Great point', 'Absolutely', 'Thanks for sharing'. No hashtags, no links, no em-dashes. No emoji unless the commenter used one, and then at most one. Never claim personal facts (age, country, job, income, results, credentials) and never invent facts or numbers; if a factual question is beyond what is known, give a modest honest opinion instead.";
 function buildPrompt(post,parts){
   var list=parts.map(function(c,i){return (i+1)+") "+c;}).join("\n\n");
-  return "You help the owner of an X (Twitter) account about AI, vibe coding and builders reply to comments quickly. The owner reads Roman Urdu comfortably and English with difficulty.\n\nTHE OWNER'S POST:\n"+post+"\n\nCOMMENTS (numbered):\n"+list+"\n\nFor every comment return one object with:\n- n: the comment number\n- urdu: what the commenter means, in "+langRule()+", short and natural. Mention the tone when it matters (joke, sarcasm, angry, question). If the comment is already Urdu, just restate it simply.\n- reply: the reply to post. "+REPLY_RULES+"\n- skip: true only if the comment is spam, a bot, a link or promo drop, a scam, or abuse; then reply must be an empty string and urdu briefly says why.\n\nReturn ONLY a JSON array, no other text, like [{\"n\":1,\"urdu\":\"...\",\"reply\":\"...\",\"skip\":false}].";
+  return "You help the owner of an X (Twitter) account about AI, vibe coding and builders reply to comments quickly. The owner reads Roman Urdu comfortably and English with difficulty. Every comment below was written UNDER the owner's post, so read each comment as a response to that post.\n\nTHE OWNER'S POST:\n"+post+"\n\nCOMMENTS (numbered):\n"+list+"\n\nFor every comment return one object with:\n- n: the comment number\n- urdu: what the commenter means, in "+langRule()+", short and natural. Mention the tone when it matters (joke, sarcasm, angry, question). If the comment is already Urdu, just restate it simply.\n- reply: the reply to post. "+REPLY_RULES+"\n- reply_urdu: a faithful translation of that reply into "+langRule()+" so the owner knows exactly what it says.\n- skip: true only if the comment is spam, a bot, a link or promo drop, a scam, or abuse; then reply and reply_urdu must be empty strings and urdu briefly says why.\n\nReturn ONLY a JSON array, no other text, like [{\"n\":1,\"urdu\":\"...\",\"reply\":\"...\",\"reply_urdu\":\"...\",\"skip\":false}].";
 }
 function parseJSON(t,open,close){var a=t.indexOf(open),b=t.lastIndexOf(close);if(a<0||b<a)throw new Error("parse");return JSON.parse(t.slice(a,b+1));}
 
@@ -341,24 +372,38 @@ function onSend(){
     p.items=p.items||[];
     parts.forEach(function(orig,i){
       var x=arr.find(function(y){return +y.n===i+1;})||arr[i]||{};
-      p.items.push({id:uid(),ts:Date.now(),orig:orig,urdu:String(x.urdu||"(matlab nahi mila)"),reply:String(x.reply||""),skip:!!x.skip,done:false});
+      p.items.push({id:uid(),ts:Date.now(),orig:orig,urdu:String(x.urdu||"(matlab nahi mila)"),reply:String(x.reply||""),rurdu:String(x.reply_urdu||""),skip:!!x.skip,done:false});
     });
     S.draft="";saveThread(p);S.scrollEnd=true;
   }).catch(function(e){
     S.err=(e&&e.message==="parse")?"Jawab samajh nahi aaya. Dobara dabayein.":copyFor(e&&e.code,e&&e.message);
   }).then(function(){S.busy=false;ctl=null;render();});
 }
-function onRegen(id){
+function runItem(id,promptFn,apply,toastMsg){
   if(S.busy)return;
   var p=getPost(S.view.day,S.view.post);if(!p)return;
   var it=(p.items||[]).find(function(x){return x.id===id;});if(!it)return;
-  if(!sampleFn){toast("Claude ke andar se kholein");return;}
-  S.busy=true;S.err="";ctl=new AbortController();paintFoot();toast("Naya reply ban raha hai...");
-  var prompt="You help the owner of an X (Twitter) account about AI, vibe coding and builders reply to comments.\n\nTHE OWNER'S POST:\n"+p.text+"\n\nCOMMENT:\n"+it.orig+"\n\nEarlier reply (write a clearly different one): "+(it.reply||"none")+"\n\n"+REPLY_RULES+"\n\nReturn ONLY JSON like {\"reply\":\"...\"}.";
-  sampleFn(prompt,{cache:false,signal:ctl.signal,temperature:0}).then(function(r){
-    var o=parseJSON(r.text,"{","}");
-    it.reply=String(o.reply||it.reply);it.skip=false;saveThread(p);
+  S.busy=true;S.err="";ctl=new AbortController();paintFoot();toast(toastMsg);
+  sampleFn(promptFn(p,it),{cache:false,signal:ctl.signal}).then(function(r){
+    apply(it,parseJSON(r.text,"{","}"));saveThread(p);
   }).catch(function(e){S.err=(e&&e.message==="parse")?"Jawab samajh nahi aaya. Dobara dabayein.":copyFor(e&&e.code,e&&e.message);}).then(function(){S.busy=false;ctl=null;render();});
+}
+var CTX="You help the owner of an X (Twitter) account about AI, vibe coding and builders reply to comments. The owner reads Roman Urdu comfortably and English with difficulty.";
+function onRegen(id){
+  runItem(id,function(p,it){
+    return CTX+"\n\nTHE OWNER'S POST:\n"+p.text+"\n\nCOMMENT UNDER THE POST:\n"+it.orig+"\n\nEarlier reply (write a clearly different one): "+(it.reply||"none")+"\n\n"+REPLY_RULES+"\n\nAlso give reply_urdu: a faithful translation of the reply into "+langRule()+".\nReturn ONLY JSON like {\"reply\":\"...\",\"reply_urdu\":\"...\"}.";
+  },function(it,o){it.reply=String(o.reply||it.reply);it.rurdu=String(o.reply_urdu||"");it.skip=false;},"Naya reply ban raha hai...");
+}
+function onModify(id){
+  var ins=(S.mods[id]||"").trim();if(!ins){toast("Pehle likhein kya badalna hai");return;}
+  runItem(id,function(p,it){
+    return CTX+"\n\nTHE OWNER'S POST:\n"+p.text+"\n\nCOMMENT UNDER THE POST:\n"+it.orig+"\n\nCURRENT REPLY (the owner may have edited it):\n"+it.reply+"\n\nTHE OWNER'S INSTRUCTION (in Roman Urdu, Urdu or English) for changing the reply:\n"+ins+"\n\nRewrite the reply so it follows the instruction exactly, while still answering the commenter and keeping these rules: "+REPLY_RULES+"\n\nAlso give reply_urdu: a faithful translation of the new reply into "+langRule()+".\nReturn ONLY JSON like {\"reply\":\"...\",\"reply_urdu\":\"...\"}.";
+  },function(it,o){it.reply=String(o.reply||it.reply);it.rurdu=String(o.reply_urdu||"");S.mods[id]="";},"Reply badal raha hun...");
+}
+function onRetrans(id){
+  runItem(id,function(p,it){
+    return CTX+"\n\nTranslate this reply into "+langRule()+", faithfully, short and natural:\n"+it.reply+"\n\nReturn ONLY JSON like {\"reply_urdu\":\"...\"}.";
+  },function(it,o){it.rurdu=String(o.reply_urdu||"");},"Matlab ban raha hai...");
 }
 
 /* ---------- actions ---------- */
@@ -398,6 +443,8 @@ document.addEventListener("click",function(e){
     var card=t.closest(".replybox");var ta2=card.querySelector(".reply");copyText(ta2.value,ta2);
   }
   else if(act==="regen"){onRegen(id);}
+  else if(act==="modify"){onModify(id);}
+  else if(act==="retrans"){onRetrans(id);}
   else if(act==="done"){var g=findItem(id);if(g.it){g.it.done=!g.it.done;saveThread(g.p);render();}}
   else if(act==="send"){onSend();}
   else if(act==="stop"){if(ctl)ctl.abort();}
@@ -410,6 +457,7 @@ function saveSettings(){try{localStorage.setItem(LS_SET,JSON.stringify(S.setting
 document.addEventListener("input",function(e){
   var t=e.target;
   if(t.id==="draft"){S.draft=t.value;autosize(t,140);}
+  else if(t.getAttribute&&t.getAttribute("data-act-input")==="mod"){S.mods[t.getAttribute("data-id")]=t.value;}
   else if(t.getAttribute&&t.getAttribute("data-act-input")==="reply"){autosize(t);var f=findItem(t.getAttribute("data-id"));if(f.it){f.it.reply=t.value;clearTimeout(pend.__r);pend.__r=setTimeout(function(){saveThread(f.p);},500);}}
 });
 document.addEventListener("focusin",function(e){if(e.target.id==="draft"){setTimeout(function(){var m=$("#main");m.scrollTop=m.scrollHeight;},250);}});
