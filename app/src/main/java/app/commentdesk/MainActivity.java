@@ -105,7 +105,7 @@ public class MainActivity extends Activity {
                         out = readAll(code >= 400 ? c.getErrorStream() : c.getInputStream());
                     } catch (Exception e) {
                         code = -1;
-                        out = String.valueOf(e.getMessage());
+                        out = e.getClass().getSimpleName() + ": " + e.getMessage();
                     }
                     final int fcode = code;
                     final String fout = out;
@@ -142,7 +142,7 @@ public class MainActivity extends Activity {
                         out = readAll(code >= 400 ? c.getErrorStream() : c.getInputStream());
                     } catch (Exception e) {
                         code = -1;
-                        out = String.valueOf(e.getMessage());
+                        out = e.getClass().getSimpleName() + ": " + e.getMessage();
                     }
                     final int fcode = code;
                     final String fout = out;

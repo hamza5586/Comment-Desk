@@ -281,7 +281,7 @@ function render(){
 }
 
 /* ---------- Gemini ---------- */
-var APP_VER="v7";
+var APP_VER="v8";
 var DEFAULT_MODEL="gemini-3.8-flash";
 var gseq=0,gseq2=0,gpend={};
 window.__gem=function(id,code,txt){var p=gpend[id];if(!p)return;delete gpend[id];p.done(code,txt);};
@@ -344,7 +344,7 @@ function gemini(prompt,opts){
         if(code===429)fail("rate",msg);
         else if(code===401||code===403||(code===400&&/API key|API_KEY/i.test(msg)))fail("badkey",msg);
         else if(code===404)fail("badmodel",msg);
-        else if(code<=0)fail("net");
+        else if(code<=0)fail("net",txt);
         else fail("server",msg);
       });
     }
@@ -353,7 +353,7 @@ function gemini(prompt,opts){
 }
 function copyFor(code,detail){
   if(code==="nokey"||code==="badkey")S.sheet=true;
-  var map={nokey:"Pehle Settings mein Gemini API key daalein.",badkey:"Gemini key sahi nahi lag rahi. Settings mein check karein.",badmodel:"Model nahi mila. App khud naya model dhoond raha tha, par nahi mila. Key check karein.",rate:"Gemini ne limit laga di. Thori der baad dobara try karein.",net:"Internet nahi chal raha ya Gemini tak nahi pohnch saka.",empty:"Gemini ne khali jawab diya. Dobara dabayein.",server:"Gemini mein masla hai. Thori der baad try karein.",slow:"Gemini ne 30 second tak jawab nahi diya, do dafa koshish ki. Dobara dabayein, ya Settings mein model badal kar gemini-3.5-flash-lite likhein.",cancelled:""};
+  var map={nokey:"Pehle Settings mein Gemini API key daalein.",badkey:"Gemini key sahi nahi lag rahi. Settings mein check karein.",badmodel:"Model nahi mila. App khud naya model dhoond raha tha, par nahi mila. Key check karein.",rate:"Gemini ne limit laga di. Thori der baad dobara try karein.",net:"Gemini tak connection nahi ban raha. Wifi/mobile data badal kar dekhein, ya VPN try karein.",empty:"Gemini ne khali jawab diya. Dobara dabayein.",server:"Gemini mein masla hai. Thori der baad try karein.",slow:"Gemini ne 30 second tak jawab nahi diya, do dafa koshish ki. Dobara dabayein, ya Settings mein model badal kar gemini-3.5-flash-lite likhein.",cancelled:""};
   var base=code in map?map[code]:"Kuch masla aaya. Dobara try karein.";
   if(detail&&code!=="cancelled"&&code!=="nokey")base+=" ("+String(detail).slice(0,140)+")";
   return base;
@@ -465,7 +465,7 @@ document.addEventListener("click",function(e){
     apiCall("POST","/v1beta/models/"+mod2+":generateContent",key2,{contents:[{role:"user",parts:[{text:"Say OK"}]}]},function(code,txt){
       var sec=((Date.now()-t1)/1000).toFixed(1),msg="";try{msg=JSON.parse(txt).error.message;}catch(e){}
       var o2=$("#testout");if(!o2)return;
-      o2.textContent=(code===200?"OK ✓ ":"Masla (code "+code+") ")+mod2+" - "+sec+"s"+(msg?" - "+msg.slice(0,160):"");
+      o2.textContent=(code===200?"OK ✓ ":"Masla (code "+code+") ")+mod2+" - "+sec+"s"+(msg?" - "+msg.slice(0,160):(code<=0&&txt?" - "+String(txt).slice(0,160):""));
     });
   }
   else if(act==="savegem"){var k=$("#gkey"),m=$("#gmodel");var cc=cfg();if(k&&k.value.trim())cc.key=k.value.trim();if(m&&m.value.trim())cc.model=m.value.trim();saveCfg(cc);S.sheet=false;S.err="";render();toast("Save ho gaya");}
