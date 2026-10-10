@@ -281,7 +281,7 @@ function render(){
 
 /* ---------- Gemini ---------- */
 var DEFAULT_MODEL="gemini-3.8-flash";
-var gseq=0,gpend={};
+var gseq=0,gseq2=0,gpend={};
 window.__gem=function(id,code,txt){var p=gpend[id];if(!p)return;delete gpend[id];p.done(code,txt);};
 function cfg(){try{return JSON.parse(localStorage.getItem("commentdesk.gem")||"{}");}catch(e){return {};}}
 function saveCfg(c){try{localStorage.setItem("commentdesk.gem",JSON.stringify(c));}catch(e){}}
@@ -313,14 +313,18 @@ function gemini(prompt,opts){
   return new Promise(function(resolve,reject){
     if(!key){reject({code:"nokey"});return;}
     var done=false;
-    if(opts.signal){opts.signal.addEventListener("abort",function(){if(done)return;done=true;reject({code:"cancelled"});});}
+    if(opts.signal){opts.signal.addEventListener("abort",function(){if(done)return;done=true;clearTimeout(tmo);reject({code:"cancelled"});});}
     function fail(code,message){if(done)return;done=true;reject({code:code,message:message||""});}
+    var tries=0,tmo=null;
+    function arm(m,thinking,listed){clearTimeout(tmo);tmo=setTimeout(function(){if(done)return;if(tries<1){tries++;gen(m,thinking,listed);}else fail("slow");},40000);}
     function gen(m,thinking,listed){
       if(!/^[A-Za-z0-9._-]+$/.test(m)){fail("badmodel");return;}
       var gc={temperature:0.9,responseMimeType:"application/json"};
-      if(thinking)gc.thinkingConfig={thinkingLevel:"low"};
+      if(thinking)gc.thinkingConfig={thinkingLevel:"minimal"};
+      var my=++gseq2;arm(m,thinking,listed);
       apiCall("POST","/v1beta/models/"+m+":generateContent",key,{contents:[{role:"user",parts:[{text:prompt}]}],generationConfig:gc},function(code,txt){
-        if(done)return;
+        if(done||my!==gseq2)return;clearTimeout(tmo);
+        if((code===503||code===500||code===502||code===504)&&tries<1){tries++;setTimeout(function(){gen(m,thinking,listed);},800);return;}
         var j=null;try{j=JSON.parse(txt);}catch(e){}
         var msg=(j&&j.error&&j.error.message)||"";
         if(code===200&&j){
@@ -346,7 +350,7 @@ function gemini(prompt,opts){
 }
 function copyFor(code,detail){
   if(code==="nokey"||code==="badkey")S.sheet=true;
-  var map={nokey:"Pehle Settings mein Gemini API key daalein.",badkey:"Gemini key sahi nahi lag rahi. Settings mein check karein.",badmodel:"Model nahi mila. App khud naya model dhoond raha tha, par nahi mila. Key check karein.",rate:"Gemini ne limit laga di. Thori der baad dobara try karein.",net:"Internet nahi chal raha ya Gemini tak nahi pohnch saka.",empty:"Gemini ne khali jawab diya. Dobara dabayein.",server:"Gemini mein masla hai. Thori der baad try karein.",cancelled:""};
+  var map={nokey:"Pehle Settings mein Gemini API key daalein.",badkey:"Gemini key sahi nahi lag rahi. Settings mein check karein.",badmodel:"Model nahi mila. App khud naya model dhoond raha tha, par nahi mila. Key check karein.",rate:"Gemini ne limit laga di. Thori der baad dobara try karein.",net:"Internet nahi chal raha ya Gemini tak nahi pohnch saka.",empty:"Gemini ne khali jawab diya. Dobara dabayein.",server:"Gemini mein masla hai. Thori der baad try karein.",slow:"Gemini bohot der laga raha hai (40 second). Dobara dabayein, ya Settings mein model badal kar gemini-3.5-flash-lite likhein.",cancelled:""};
   var base=code in map?map[code]:"Kuch masla aaya. Dobara try karein.";
   if(detail&&code!=="cancelled"&&code!=="nokey")base+=" ("+String(detail).slice(0,140)+")";
   return base;
