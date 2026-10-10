@@ -79,6 +79,51 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void req(final int id, final String method, final String url, final String headersJson, final String body) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    int code = 0;
+                    String out = "";
+                    try {
+                        URL u = new URL(url);
+                        String h = u.getHost();
+                        if (!"https".equals(u.getProtocol()) || !(h.equals("generativelanguage.googleapis.com") || h.equals("api.groq.com") || h.equals("openrouter.ai")))
+                            throw new Exception("host not allowed");
+                        HttpURLConnection c = (HttpURLConnection) u.openConnection();
+                        boolean post = "POST".equals(method);
+                        c.setRequestMethod(post ? "POST" : "GET");
+                        c.setConnectTimeout(10000);
+                        c.setReadTimeout(30000);
+                        JSONObject hj = new JSONObject(headersJson == null || headersJson.isEmpty() ? "{}" : headersJson);
+                        java.util.Iterator<String> it = hj.keys();
+                        while (it.hasNext()) { String k = it.next(); c.setRequestProperty(k, hj.getString(k)); }
+                        if (post) {
+                            c.setDoOutput(true);
+                            c.setRequestProperty("Content-Type", "application/json");
+                            OutputStream os = c.getOutputStream();
+                            os.write(String.valueOf(body).getBytes(StandardCharsets.UTF_8));
+                            os.close();
+                        }
+                        code = c.getResponseCode();
+                        out = readAll(code >= 400 ? c.getErrorStream() : c.getInputStream());
+                    } catch (Exception e) {
+                        code = -1;
+                        out = e.getClass().getSimpleName() + ": " + e.getMessage();
+                    }
+                    final int fcode = code;
+                    final String fout = out;
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            web.evaluateJavascript("window.__gem(" + id + "," + fcode + "," + JSONObject.quote(fout) + ")", null);
+                        }
+                    });
+                }
+            }).start();
+        }
+
+        @JavascriptInterface
         public void call(final int id, final String method, final String path, final String key, final String body) {
             new Thread(new Runnable() {
                 @Override

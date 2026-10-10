@@ -148,7 +148,7 @@ function removeDayRemote(d){if(!dayCol)return;later("x"+d.id,function(){var jobs
 function removePostRemote(p){if(!thrCol)return;later("xp"+p.id,function(){return thrCol.doc(p.id).delete();});}
 function pushAllToCloud(){S.days.forEach(function(d){saveDay(d);d.posts.forEach(function(p){saveThread(p);});});}
 
-function initStore(){sampleFn=gemini;finishInit();}
+function initStore(){sampleFn=llm;finishInit();}
 function finishInit(){
   if(S.storeReady)return;
   S.storeReady=true;
@@ -259,13 +259,15 @@ function paintFoot(){var f=$("#foot");var h=footHTML();f.hidden=!h;f.innerHTML=h
 function autosize(el,max){el.style.height="auto";el.style.height=Math.min(el.scrollHeight+2,max||9999)+"px";}
 function sheetHTML(){
   if(!S.sheet)return "";
-  var s=S.settings,c=cfg();
+  var st=S.settings,c=cfg(),pv=S.sprov||provOf(c);
+  var seg='';Object.keys(PROV).forEach(function(k){seg+='<button data-act="setprov" data-v="'+k+'" class="'+(pv===k?"on":"")+'">'+PROV[k].name+'</button>';});
   return '<div class="sheetbg" data-act="closesheet"><div class="sheet" data-stop="1" style="max-height:92%;overflow-y:auto"><div class="spread"><p class="day-t">Settings</p></div>'+
-    '<div><p class="lbl">GEMINI API KEY</p><input id="gkey" class="in" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="'+(c.key?'Key save hai (badalne ke liye nayi paste karein)':'AIza... yahan paste karein')+'"></div>'+
-    '<div><p class="lbl">GEMINI MODEL</p><input id="gmodel" class="in" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" value="'+esc(c.model||DEFAULT_MODEL)+'"></div>'+
+    '<div><p class="lbl">AI KAUNSA USE KARNA HAI</p><div class="seg">'+seg+'</div><p class="hint">Gemini na chale to Groq try karein (bohot tez hai).</p></div>'+
+    '<div><p class="lbl">'+PROV[pv].name.toUpperCase()+' API KEY</p><input id="gkey" class="in" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="'+(keyOf(c,pv)?'Key save hai (badalne ke liye nayi paste karein)':PROV[pv].hint)+'"></div>'+
+    '<div><p class="lbl">MODEL</p><input id="gmodel" class="in" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" value="'+esc(modelOf(c,pv))+'"></div>'+
     '<button class="btn primary wide" data-act="savegem">Save karein</button><button class="btn wide" data-act="testgem">Connection test karein</button><p class="hint" id="testout" style="margin:0"></p>'+
-    '<div><p class="lbl">MATLAB KIS ZUBAAN MEIN</p><div class="seg"><button data-act="setscript" data-v="roman" class="'+(s.script==="roman"?"on":"")+'">Roman Urdu</button><button data-act="setscript" data-v="urdu" class="'+(s.script==="urdu"?"on":"")+'">اردو</button></div></div>'+
-    '<div class="credit" style="padding:0">Comment Desk '+APP_VER+' &middot; made by <b>Ameer Hamza</b></div><p class="hint" style="margin:0">Key aur saara data sirf is phone mein save hota hai. Comments seedhe Google Gemini ko jate hain.</p>'+
+    '<div><p class="lbl">MATLAB KIS ZUBAAN MEIN</p><div class="seg"><button data-act="setscript" data-v="roman" class="'+(st.script==="roman"?"on":"")+'">Roman Urdu</button><button data-act="setscript" data-v="urdu" class="'+(st.script==="urdu"?"on":"")+'">اردو</button></div></div>'+
+    '<div class="credit" style="padding:0">Comment Desk '+APP_VER+' &middot; made by <b>Ameer Hamza</b></div><p class="hint" style="margin:0">Key aur saara data sirf is phone mein save hota hai. Comments seedhe chuni hui AI company ko jate hain.</p>'+
     '<button class="btn wide" data-act="closesheet">Band karein</button></div></div>';
 }
 function render(){
@@ -281,12 +283,73 @@ function render(){
 }
 
 /* ---------- Gemini ---------- */
-var APP_VER="v8";
+var APP_VER="v9";
 var DEFAULT_MODEL="gemini-3.8-flash";
 var gseq=0,gseq2=0,gpend={};
 window.__gem=function(id,code,txt){var p=gpend[id];if(!p)return;delete gpend[id];p.done(code,txt);};
+var PROV={
+  gemini:{name:"Gemini",model:"gemini-3.8-flash",hint:"aistudio.google.com se key"},
+  groq:{name:"Groq (tez)",model:"llama-3.3-70b-versatile",hint:"console.groq.com se free key (gsk_...)"},
+  openrouter:{name:"OpenRouter",model:"meta-llama/llama-3.3-70b-instruct:free",hint:"openrouter.ai se key (sk-or-...)"}
+};
+function provOf(c){return PROV[c.provider]?c.provider:"gemini";}
+function keyOf(c,pv){return ((c.keys&&c.keys[pv])||(pv==="gemini"?c.key:"")||"").trim();}
+function modelOf(c,pv){return ((c.models&&c.models[pv])||(pv==="gemini"?c.model:"")||PROV[pv].model).trim();}
+function llm(prompt,opts){
+  var c=cfg(),pv=provOf(c);
+  if(pv==="gemini")return gemini(prompt,opts);
+  return openai(pv,prompt,opts||{});
+}
+function openai(pv,prompt,opts){
+  var c=cfg(),key=keyOf(c,pv),model=modelOf(c,pv);
+  return new Promise(function(resolve,reject){
+    if(!key){reject({code:"nokey"});return;}
+    var done=false,tries=0,tmo=null,my=0;
+    if(opts.signal){opts.signal.addEventListener("abort",function(){if(done)return;done=true;clearTimeout(tmo);reject({code:"cancelled"});});}
+    function fail(code,message){clearTimeout(tmo);if(done)return;done=true;reject({code:code,message:message||""});}
+    var hdr={"Authorization":"Bearer "+key};
+    function listPick(cb){
+      httpReq("GET",HOSTS[pv]+(pv==="groq"?"/openai/v1/models":"/api/v1/models"),hdr,null,function(code,txt){
+        var best=null;
+        try{var ids=(JSON.parse(txt).data||[]).map(function(m){return m.id;}).filter(function(i){return !/(whisper|guard|tts|embed|vision|orpheus|distil)/i.test(i)&&(pv!=="openrouter"||/:free$/.test(i));});
+          var pref=[/llama-3\.3-70b/,/gpt-oss-120b/,/llama-3\.1-70b/,/llama-4/,/qwen/,/llama/,/gpt-oss/];
+          for(var i=0;i<pref.length&&!best;i++){best=ids.find(function(x){return pref[i].test(x);})||null;}
+          if(!best)best=ids[0]||null;}catch(e){}
+        cb(best);});
+    }
+    function gen(m,listed){
+      my++;var cur=my;
+      clearTimeout(tmo);tmo=setTimeout(function(){if(done||cur!==my)return;if(tries<1){tries++;gen(m,listed);}else fail("slow");},30000);
+      S.stage=PROV[pv].name+" "+m+(tries?" (dobara)":"");
+      httpReq("POST",HOSTS[pv]+(pv==="groq"?"/openai/v1/chat/completions":"/api/v1/chat/completions"),hdr,{model:m,messages:[{role:"user",content:prompt}],temperature:0.8,max_tokens:1500},function(code,txt){
+        if(done||cur!==my)return;clearTimeout(tmo);
+        var j=null;try{j=JSON.parse(txt);}catch(e){}
+        var msg=(j&&j.error&&(j.error.message||j.error))||"";if(typeof msg!=="string")msg=JSON.stringify(msg);
+        if(code===200&&j){var t="";try{t=j.choices[0].message.content||"";}catch(e){}
+          if(!t){fail("empty","");return;}
+          var c2=cfg();c2.models=c2.models||{};if(c2.models[pv]!==m){c2.models[pv]=m;saveCfg(c2);}
+          done=true;resolve({text:t});return;}
+        if((code===503||code===500||code===502||code===504)&&tries<1){tries++;setTimeout(function(){gen(m,listed);},800);return;}
+        if((code===404||code===400)&&/model|decommission|not found|does not exist/i.test(msg)&&!listed){listPick(function(b){if(done)return;if(b&&b!==m)gen(b,true);else fail("badmodel",msg);});return;}
+        if(code===429)fail("rate",msg);
+        else if(code===401||code===403)fail("badkey",msg);
+        else if(code===404||code===400)fail("badmodel",msg);
+        else if(code<=0)fail("net",txt);
+        else fail("server",msg);
+      });
+    }
+    gen(model,false);
+  });
+}
 function cfg(){try{return JSON.parse(localStorage.getItem("commentdesk.gem")||"{}");}catch(e){return {};}}
 function saveCfg(c){try{localStorage.setItem("commentdesk.gem",JSON.stringify(c));}catch(e){}}
+var HOSTS={gemini:"https://generativelanguage.googleapis.com",groq:"https://api.groq.com",openrouter:"https://openrouter.ai"};
+function httpReq(method,url,headers,bodyObj,cb){
+  var body=bodyObj?JSON.stringify(bodyObj):"";
+  if(window.AndroidBridge&&window.AndroidBridge.req){var id=++gseq;gpend[id]={done:cb};window.AndroidBridge.req(id,method,url,JSON.stringify(headers),body);return;}
+  var init={method:method,headers:Object.assign({"Content-Type":"application/json"},headers)};if(method==="POST")init.body=body;
+  fetch(url,init).then(function(r){return r.text().then(function(t){cb(r.status,t);});}).catch(function(){cb(-1,"");});
+}
 function apiCall(method,path,key,bodyObj,cb){
   var body=bodyObj?JSON.stringify(bodyObj):"";
   if(window.AndroidBridge&&window.AndroidBridge.call){
@@ -353,7 +416,7 @@ function gemini(prompt,opts){
 }
 function copyFor(code,detail){
   if(code==="nokey"||code==="badkey")S.sheet=true;
-  var map={nokey:"Pehle Settings mein Gemini API key daalein.",badkey:"Gemini key sahi nahi lag rahi. Settings mein check karein.",badmodel:"Model nahi mila. App khud naya model dhoond raha tha, par nahi mila. Key check karein.",rate:"Gemini ne limit laga di. Thori der baad dobara try karein.",net:"Gemini tak connection nahi ban raha. Wifi/mobile data badal kar dekhein, ya VPN try karein.",empty:"Gemini ne khali jawab diya. Dobara dabayein.",server:"Gemini mein masla hai. Thori der baad try karein.",slow:"Gemini ne 30 second tak jawab nahi diya, do dafa koshish ki. Dobara dabayein, ya Settings mein model badal kar gemini-3.5-flash-lite likhein.",cancelled:""};
+  var map={nokey:"Pehle Settings mein API key daalein.",badkey:"API key sahi nahi lag rahi. Settings mein check karein.",badmodel:"Model nahi mila. App khud naya model dhoond raha tha, par nahi mila. Key check karein.",rate:"Free limit poori ho gayi. Thori der baad try karein ya Settings mein dusri AI chunein.",net:"Gemini tak connection nahi ban raha. Wifi/mobile data badal kar dekhein, ya VPN try karein.",empty:"Gemini ne khali jawab diya. Dobara dabayein.",server:"Gemini mein masla hai. Thori der baad try karein.",slow:"AI ne 30 second tak jawab nahi diya, do dafa koshish ki. Dobara dabayein, ya Settings mein model badal kar gemini-3.5-flash-lite likhein.",cancelled:""};
   var base=code in map?map[code]:"Kuch masla aaya. Dobara try karein.";
   if(detail&&code!=="cancelled"&&code!=="nokey")base+=" ("+String(detail).slice(0,140)+")";
   return base;
@@ -455,21 +518,28 @@ document.addEventListener("click",function(e){
   else if(act==="done"){var g=findItem(id);if(g.it){g.it.done=!g.it.done;saveThread(g.p);render();}}
   else if(act==="send"){onSend();}
   else if(act==="stop"){if(ctl)ctl.abort();}
-  else if(act==="settings"){S.sheet=true;render();}
-  else if(act==="closesheet"){S.sheet=false;render();}
+  else if(act==="settings"){S.sheet=true;S.sprov=null;render();}
+  else if(act==="closesheet"){S.sheet=false;S.sprov=null;render();}
   else if(act==="setscript"){S.settings.script=t.getAttribute("data-v");saveSettings();render();}
+  else if(act==="setprov"){stashSheet();S.sprov=t.getAttribute("data-v");render();}
   else if(act==="testgem"){
-    var k2=$("#gkey"),m2=$("#gmodel"),c2=cfg(),key2=(k2&&k2.value.trim())||c2.key||"",mod2=(m2&&m2.value.trim())||c2.model||DEFAULT_MODEL,o=$("#testout");
-    if(!key2){o.textContent="Pehle key paste karein.";return;}
+    stashSheet();var c2=cfg(),pv2=S.sprov||provOf(c2),o=$("#testout");
+    if(!keyOf(c2,pv2)){o.textContent="Pehle key paste karein.";return;}
+    c2.provider=pv2;saveCfg(c2);
     var t1=Date.now();o.textContent="Test chal raha hai...";
-    apiCall("POST","/v1beta/models/"+mod2+":generateContent",key2,{contents:[{role:"user",parts:[{text:"Say OK"}]}]},function(code,txt){
-      var sec=((Date.now()-t1)/1000).toFixed(1),msg="";try{msg=JSON.parse(txt).error.message;}catch(e){}
-      var o2=$("#testout");if(!o2)return;
-      o2.textContent=(code===200?"OK ✓ ":"Masla (code "+code+") ")+mod2+" - "+sec+"s"+(msg?" - "+msg.slice(0,160):(code<=0&&txt?" - "+String(txt).slice(0,160):""));
-    });
+    llm('Reply with JSON {"ok":true}',{}).then(function(){var o2=$("#testout");if(o2)o2.textContent="OK \u2713 "+PROV[pv2].name+" "+modelOf(cfg(),pv2)+" - "+((Date.now()-t1)/1000).toFixed(1)+"s";}).catch(function(e){var o2=$("#testout");if(o2)o2.textContent="Masla: "+copyFor(e&&e.code,e&&e.message)+" - "+((Date.now()-t1)/1000).toFixed(1)+"s";});
   }
-  else if(act==="savegem"){var k=$("#gkey"),m=$("#gmodel");var cc=cfg();if(k&&k.value.trim())cc.key=k.value.trim();if(m&&m.value.trim())cc.model=m.value.trim();saveCfg(cc);S.sheet=false;S.err="";render();toast("Save ho gaya");}
+  else if(act==="savegem"){stashSheet();var c3=cfg();c3.provider=S.sprov||provOf(c3);saveCfg(c3);S.sprov=null;S.sheet=false;S.err="";render();toast("Save ho gaya");}
 });
+function stashSheet(){
+  var k=$("#gkey"),m=$("#gmodel");if(!k&&!m)return;
+  var c=cfg(),pv=S.sprov||provOf(c);c.keys=c.keys||{};c.models=c.models||{};
+  if(pv==="gemini"&&c.key&&!c.keys.gemini)c.keys.gemini=c.key;
+  if(k&&k.value.trim())c.keys[pv]=k.value.trim();
+  if(m&&m.value.trim())c.models[pv]=m.value.trim();
+  if(pv==="gemini"){c.key=c.keys.gemini||c.key;c.model=c.models.gemini||c.model;}
+  saveCfg(c);
+}
 function saveSettings(){try{localStorage.setItem(LS_SET,JSON.stringify(S.settings));}catch(e){}}
 document.addEventListener("input",function(e){
   var t=e.target;
