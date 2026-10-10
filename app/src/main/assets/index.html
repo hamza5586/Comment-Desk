@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Comment Desk</title>
+<style>:root{color-scheme:light}body{margin:0}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Noto+Nastaliq+Urdu:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* Concept: a one-handed Android work desk. Days -> posts -> a paste-and-reply chat. Cool slate ground, one green signal colour reserved for the reply and the copy button. */
+:root{
+  --bg:#EDF0F3; --surface:#FFFFFF; --surface2:#F4F6F8; --ink:#12171D; --muted:#5A6672; --line:#D8DEE4;
+  --accent:#0E8A66; --accent-ink:#FFFFFF; --accent-soft:#DDF1E9;
+  --warn:#B3501A; --warn-soft:#F8E6DA;
+  --font-ui:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-ur:"Noto Nastaliq Urdu","Jameel Noori Nastaleeq","Noto Naskh Arabic",serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1317; --surface:#161D23; --surface2:#1C252C; --ink:#E7ECF0; --muted:#8F9BA7; --line:#26323B;
+    --accent:#3FD6A1; --accent-ink:#052A1E; --accent-soft:#12302A; --warn:#F0A36B; --warn-soft:#33241A; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1317; --surface:#161D23; --surface2:#1C252C; --ink:#E7ECF0; --muted:#8F9BA7; --line:#26323B;
+  --accent:#3FD6A1; --accent-ink:#052A1E; --accent-soft:#12302A; --warn:#F0A36B; --warn-soft:#33241A; color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:16px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+*{box-sizing:border-box}
+button,textarea{font:inherit;color:inherit}
+#app{height:100%;display:flex;flex-direction:column;max-width:680px;margin:0 auto;position:relative}
+.top{flex:none;display:flex;align-items:center;gap:4px;padding:6px 8px 6px 12px;border-bottom:1px solid var(--line);background:var(--bg)}
+.top h1{flex:1;min-width:0;margin:0;font-size:18px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .sub{font-size:12px;color:var(--muted);font-weight:500}
+.ib{flex:none;width:44px;height:44px;border:0;background:transparent;border-radius:12px;display:grid;place-items:center;cursor:pointer;color:var(--ink)}
+.ib:active{background:var(--surface2)}
+.ib svg{width:22px;height:22px}
+.main{flex:1;min-height:0;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;overscroll-behavior:contain}
+.foot{flex:none;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);background:var(--bg)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;min-width:0}
+.tap{display:block;width:100%;text-align:left;cursor:pointer}
+.tap:active{background:var(--surface2)}
+.day-t{font-size:20px;font-weight:700;letter-spacing:-.01em;margin:0}
+.meta{font-size:13px;color:var(--muted);margin:2px 0 0}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.spread{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.btn{min-height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-weight:600;font-size:15px;cursor:pointer}
+.btn:active{background:var(--surface2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:active{filter:brightness(.92)}
+.btn.ghost{background:transparent}
+.btn.danger{background:var(--warn);border-color:var(--warn);color:#fff}
+.btn[disabled]{opacity:.55}
+.btn.wide{width:100%}
+.lbl{font-size:11px;font-weight:700;letter-spacing:.09em;color:var(--muted);margin:0 0 4px}
+.lbl+*{margin-top:0}
+.sec{margin-top:12px}
+.sec:first-child{margin-top:0}
+.orig{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.mean{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink)}
+.mean.ur{font-family:var(--font-ur);font-size:18px;line-height:2.1}
+.replybox{background:var(--accent-soft);border-radius:12px;padding:10px 12px}
+.replybox .lbl{color:var(--accent)}
+.reply{display:block;width:100%;border:0;background:transparent;resize:none;outline:none;padding:0;margin:0 0 10px;font-size:17px;line-height:1.4;overflow:hidden}
+.skipnote{background:var(--warn-soft);color:var(--warn);border-radius:12px;padding:10px 12px;font-weight:600;font-size:14px}
+.card.done{opacity:.55}
+.postclamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.postfull{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+textarea.in,input.in{width:100%;min-height:48px;max-height:140px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);resize:none;outline:none;display:block}
+textarea.in:focus,input.in:focus,.reply:focus{outline:2px solid var(--accent);outline-offset:1px}
+.empty{color:var(--muted);text-align:center;padding:28px 12px;font-size:15px}
+.bar{background:var(--warn-soft);color:var(--warn);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;font-weight:600}
+.err{background:var(--warn-soft);color:var(--warn);border-radius:12px;padding:10px 12px;font-size:14px;font-weight:600;margin-bottom:10px}
+.hint{font-size:12px;color:var(--muted);margin:6px 2px 0}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--muted);margin-right:6px}
+.dot.ok{background:var(--accent)}
+.toast{position:absolute;left:50%;bottom:calc(86px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;font-weight:600;pointer-events:none;opacity:0;transition:opacity .15s;max-width:90%;text-align:center}
+.toast.on{opacity:1}
+.sheetbg{position:absolute;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;z-index:5}
+.sheet{width:100%;background:var(--bg);border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
+.seg{display:flex;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.seg button{flex:1;min-height:44px;border:0;background:var(--surface);font-weight:600;cursor:pointer}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+.thinking{display:flex;align-items:center;gap:10px;margin-bottom:10px;color:var(--muted);font-weight:600;font-size:14px}
+.spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent);animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}.toast{transition:none}}
+</style></head><body>
+<div id="app">
+  <div class="top" id="top"></div>
+  <div class="main" id="main"></div>
+  <div class="foot" id="foot" hidden></div>
+  <div class="toast" id="toast" role="status"></div>
+  <div id="sheetHost"></div>
+</div>
+
+<script>
+(function(){
+"use strict";
+var LS_KEY="commentdesk.v1", LS_SET="commentdesk.settings";
+var $=function(s){return document.querySelector(s)};
+var esc=function(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})};
+var uid=function(){return Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4)};
+var ICON={
+  back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
+  gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>'
+};
+
+var S={days:[],view:{name:"days"},draft:"",busy:false,err:"",sheet:false,confirm:null,expandPost:false,
+  settings:{script:"roman",speed:"quick"},sync:"local",storeReady:false,dirty:false};
+var sampleFn=null, ctl=null, dayCol=null, thrCol=null;
+
+try{var st=JSON.parse(localStorage.getItem(LS_SET)||"null"); if(st){S.settings.script=st.script==="urdu"?"urdu":"roman"; S.settings.speed=st.speed==="default"?"default":"quick";}}catch(e){}
+try{var lo=JSON.parse(localStorage.getItem(LS_KEY)||"null"); if(lo&&Array.isArray(lo.days)) S.days=lo.days;}catch(e){}
+
+/* ---------- storage ---------- */
+var pend={};
+function later(key,fn){clearTimeout(pend[key]);pend[key]=setTimeout(function(){delete pend[key];Promise.resolve().then(fn).then(function(){if(dayCol){S.sync="cloud";paintSync();}}).catch(function(){S.sync="err";paintSync();});},350);}
+function persistLocal(){try{localStorage.setItem(LS_KEY,JSON.stringify({days:S.days}));}catch(e){}}
+function metaOf(d){return {id:d.id,name:d.name,created:d.created,posts:d.posts.map(function(p){return {id:p.id,text:p.text,created:p.created};})};}
+function saveDay(d){S.dirty=true;d.updated=Date.now();persistLocal();if(dayCol){later("d"+d.id,function(){return dayCol.doc(d.id).set({json:JSON.stringify(metaOf(d)),updated:d.updated});});}}
+function saveThread(p){S.dirty=true;persistLocal();if(thrCol){later("t"+p.id,function(){return thrCol.doc(p.id).set({json:JSON.stringify(p.items||[]),updated:Date.now()});});}}
+function removeDayRemote(d){if(!dayCol)return;later("x"+d.id,function(){var jobs=[dayCol.doc(d.id).delete()];d.posts.forEach(function(p){jobs.push(thrCol.doc(p.id).delete());});return Promise.all(jobs);});}
+function removePostRemote(p){if(!thrCol)return;later("xp"+p.id,function(){return thrCol.doc(p.id).delete();});}
+function pushAllToCloud(){S.days.forEach(function(d){saveDay(d);d.posts.forEach(function(p){saveThread(p);});});}
+
+function initStore(){sampleFn=gemini;finishInit();}
+function finishInit(){
+  if(S.storeReady)return;
+  S.storeReady=true;
+  if(!S.days.length){addDay(true);}
+  render();
+}
+
+/* ---------- model ---------- */
+function getDay(id){return S.days.find(function(d){return d.id===id;});}
+function getPost(did,pid){var d=getDay(did);return d&&d.posts.find(function(p){return p.id===pid;});}
+function addDay(silent){
+  var n=0;S.days.forEach(function(d){var m=/(\d+)/.exec(d.name);if(m)n=Math.max(n,+m[1]);});
+  var d={id:uid(),name:"Day "+(n+1),created:new Date().toISOString(),posts:[],updated:Date.now()};
+  S.days.push(d);saveDay(d);
+  if(!silent){nav({name:"day",day:d.id});}
+  return d;
+}
+function commentsIn(d){var n=0;d.posts.forEach(function(p){n+=(p.items||[]).length;});return n;}
+function fmtDate(iso){try{return new Date(iso).toLocaleDateString("en-GB",{day:"numeric",month:"short"});}catch(e){return "";}}
+
+/* ---------- navigation ---------- */
+function parentOf(v){if(v.name==="post")return {name:"day",day:v.day};if(v.name==="day")return {name:"days"};return null;}
+function nav(v,push){S.view=v;S.confirm=null;S.err="";S.expandPost=false;if(push!==false){try{history.pushState({},"");}catch(e){}}render();}
+window.addEventListener("popstate",function(){var p=parentOf(S.view);if(p){nav(p,false);}});
+
+/* ---------- render ---------- */
+function paintSync(){var el=$("#syncdot");if(el){el.className="dot"+(S.sync==="cloud"?" ok":"");}var t=$("#synctxt");if(t){t.textContent=S.sync==="cloud"?"Cloud mein save":(S.sync==="err"?"Cloud save nahi hua":"Sirf is phone mein save");}}
+function topHTML(){
+  var v=S.view,h="";
+  if(v.name==="days"){
+    h='<h1>Comment Desk</h1><button class="ib" data-act="settings" aria-label="Settings">'+ICON.gear+'</button>';
+  }else if(v.name==="day"){
+    var d=getDay(v.day);
+    h='<button class="ib" data-act="back" aria-label="Wapas">'+ICON.back+'</button><h1>'+esc(d?d.name:"Day")+'</h1><button class="ib" data-act="askdelday" aria-label="Din hatayein">'+ICON.trash+'</button>';
+  }else{
+    var d2=getDay(v.day),idx=d2?d2.posts.findIndex(function(p){return p.id===v.post;}):-1;
+    h='<button class="ib" data-act="back" aria-label="Wapas">'+ICON.back+'</button><h1>'+esc(d2?d2.name:"Day")+' <span class="sub">Post '+(idx+1)+'</span></h1><button class="ib" data-act="askdelpost" aria-label="Post hatayein">'+ICON.trash+'</button>';
+  }
+  return h;
+}
+function confirmHTML(){
+  if(!S.confirm)return "";
+  var msg=S.confirm.kind==="day"?"Ye poora din (posts aur comments samet) hata dein?":S.confirm.kind==="post"?"Ye post aur uske saare comments hata dein?":"Ye comment hata dein?";
+  return '<div class="bar"><span>'+msg+'</span><div class="row"><button class="btn danger" data-act="confirmyes">Haan, hatayein</button><button class="btn" data-act="confirmno">Nahi</button></div></div>';
+}
+function daysHTML(){
+  var list=S.days.slice().sort(function(a,b){return a.created<b.created?1:-1;});
+  var h='<button class="btn primary wide" data-act="newday">+ Naya din</button>';
+  if(!list.length)h+='<div class="empty">Abhi koi din nahi. Naya din shuru karein.</div>';
+  list.forEach(function(d){
+    h+='<button class="card tap" data-act="openday" data-id="'+d.id+'"><div class="spread"><p class="day-t">'+esc(d.name)+'</p><span class="meta">'+esc(fmtDate(d.created))+'</span></div><p class="meta">'+d.posts.length+' posts &middot; '+commentsIn(d)+' comments</p></button>';
+  });
+  h+='<p class="hint"><span id="syncdot" class="dot'+(S.sync==="cloud"?" ok":"")+'"></span><span id="synctxt"></span></p>';
+  return h;
+}
+function dayHTML(){
+  var d=getDay(S.view.day);if(!d)return '<div class="empty">Ye din nahi mila.</div>';
+  var h=confirmHTML();
+  h+='<div class="card"><p class="lbl">NAYI POST JODEIN</p><textarea class="in" id="newpost" rows="3" placeholder="X par jo post ki wo yahan paste karein" style="min-height:84px"></textarea><div class="row" style="margin-top:10px"><button class="btn primary" data-act="addpost">Post jodein</button></div></div>';
+  if(!d.posts.length)h+='<div class="empty">Is din ki pehli post upar paste karein.</div>';
+  d.posts.forEach(function(p,i){
+    h+='<button class="card tap" data-act="openpost" data-id="'+p.id+'"><div class="spread"><p class="lbl" style="margin:0">POST '+(i+1)+'</p><span class="meta">'+((p.items||[]).length)+' comments</span></div><p class="postclamp" dir="auto" style="margin-top:6px">'+esc(p.text)+'</p></button>';
+  });
+  return h;
+}
+function itemHTML(it,i){
+  var ur=S.settings.script==="urdu";
+  var h='<article class="card'+(it.done?' done':'')+'" data-item="'+it.id+'">';
+  h+='<div class="sec"><p class="lbl">COMMENT '+(i+1)+'</p><p class="orig" dir="auto">'+esc(it.orig)+'</p></div>';
+  h+='<div class="sec"><p class="lbl">MATLAB</p><p class="mean'+(ur?' ur':'')+'"'+(ur?' dir="rtl"':'')+'>'+esc(it.urdu)+'</p></div>';
+  if(it.skip){
+    h+='<div class="sec"><div class="skipnote">Is par reply na karein (spam ya bekaar lag raha hai).</div></div>';
+    h+='<div class="row sec"><button class="btn" data-act="regen" data-id="'+it.id+'">Phir bhi reply banao</button><button class="btn ghost" data-act="askdelitem" data-id="'+it.id+'">Hatayein</button></div>';
+  }else{
+    h+='<div class="sec replybox"><p class="lbl">REPLY (badal sakte hain)</p><textarea class="reply" rows="1" data-act-input="reply" data-id="'+it.id+'">'+esc(it.reply)+'</textarea><div class="row"><button class="btn primary" data-act="copy" data-id="'+it.id+'">Copy</button><button class="btn" data-act="regen" data-id="'+it.id+'">Dusra reply</button></div></div>';
+    h+='<div class="row sec"><button class="btn ghost" data-act="done" data-id="'+it.id+'">'+(it.done?'Wapas kholein':'Ho gaya')+'</button><button class="btn ghost" data-act="askdelitem" data-id="'+it.id+'">Hatayein</button></div>';
+  }
+  h+='</article>';
+  return h;
+}
+function postHTML(){
+  var p=getPost(S.view.day,S.view.post);if(!p)return '<div class="empty">Ye post nahi mili.</div>';
+  var h=confirmHTML();
+  h+='<button class="card tap" data-act="togglepost"><p class="lbl">POST</p><p class="'+(S.expandPost?'postfull':'postclamp')+'" dir="auto">'+esc(p.text)+'</p></button>';
+  if(!(p.items||[]).length)h+='<div class="empty">Post par aaye comments neeche paste karein. Main matlab aur chhota reply bana dunga.</div>';
+  (p.items||[]).forEach(function(it,i){h+=itemHTML(it,i);});
+  return h;
+}
+function footHTML(){
+  var v=S.view;
+  if(v.name!=="post")return "";
+  var h="";
+  if(S.err)h+='<div class="err">'+esc(S.err)+'</div>';
+  if(S.busy)h+='<div class="thinking"><span class="spin"></span><span>Soch raha hun...</span><button class="btn" data-act="stop" style="min-height:36px;padding:0 12px;margin-left:auto">Rok dein</button></div>';
+  h+='<textarea class="in" id="draft" rows="2" placeholder="Comment yahan paste karein (kai hon to beech mein khali line)" '+(S.busy?'disabled':'')+'>'+esc(S.draft)+'</textarea>';
+  h+='<div class="row" style="margin-top:8px"><button class="btn primary" data-act="send" '+(S.busy?'disabled':'')+' style="flex:1">Samjhao aur reply banao</button></div>';
+  return h;
+}
+function paintFoot(){var f=$("#foot");var h=footHTML();f.hidden=!h;f.innerHTML=h;var d=$("#draft");if(d)autosize(d,140);}
+function autosize(el,max){el.style.height="auto";el.style.height=Math.min(el.scrollHeight+2,max||9999)+"px";}
+function sheetHTML(){
+  if(!S.sheet)return "";
+  var s=S.settings,c=cfg();
+  return '<div class="sheetbg" data-act="closesheet"><div class="sheet" data-stop="1" style="max-height:92%;overflow-y:auto"><div class="spread"><p class="day-t">Settings</p></div>'+
+    '<div><p class="lbl">GEMINI API KEY</p><input id="gkey" class="in" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="'+(c.key?'Key save hai (badalne ke liye nayi paste karein)':'AIza... yahan paste karein')+'"></div>'+
+    '<div><p class="lbl">GEMINI MODEL</p><input id="gmodel" class="in" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" value="'+esc(c.model||"gemini-2.5-flash")+'"></div>'+
+    '<button class="btn primary wide" data-act="savegem">Save karein</button>'+
+    '<div><p class="lbl">MATLAB KIS ZUBAAN MEIN</p><div class="seg"><button data-act="setscript" data-v="roman" class="'+(s.script==="roman"?"on":"")+'">Roman Urdu</button><button data-act="setscript" data-v="urdu" class="'+(s.script==="urdu"?"on":"")+'">اردو</button></div></div>'+
+    '<p class="hint" style="margin:0">Key aur saara data sirf is phone mein save hota hai. Comments seedhe Google Gemini ko jate hain.</p>'+
+    '<button class="btn wide" data-act="closesheet">Band karein</button></div></div>';
+}
+function render(){
+  if(!S.storeReady){$("#main").innerHTML='<div class="empty">Khul raha hai...</div>';return;}
+  $("#top").innerHTML=topHTML();
+  var v=S.view,h="";
+  if(v.name==="days")h=daysHTML();else if(v.name==="day")h=dayHTML();else h=postHTML();
+  var m=$("#main");m.innerHTML=h;
+  $("#sheetHost").innerHTML=sheetHTML();
+  paintFoot();paintSync();
+  m.querySelectorAll(".reply").forEach(function(t){autosize(t);});
+  if(v.name==="post"&&S.scrollEnd){m.scrollTop=m.scrollHeight;S.scrollEnd=false;}
+}
+
+/* ---------- Gemini ---------- */
+var gseq=0,gpend={};
+window.__gem=function(id,code,txt){var p=gpend[id];if(!p)return;delete gpend[id];p.done(code,txt);};
+function cfg(){try{return JSON.parse(localStorage.getItem("commentdesk.gem")||"{}");}catch(e){return {};}}
+function saveCfg(c){try{localStorage.setItem("commentdesk.gem",JSON.stringify(c));}catch(e){}}
+function gemini(prompt,opts){
+  opts=opts||{};
+  var c=cfg(),key=(c.key||"").trim(),model=(c.model||"gemini-2.5-flash").trim();
+  return new Promise(function(resolve,reject){
+    if(!key){reject({code:"nokey"});return;}
+    if(!/^[A-Za-z0-9._-]+$/.test(model)){reject({code:"badmodel"});return;}
+    var gc={temperature:0.9,responseMimeType:"application/json"};
+    if(/2\.5-flash/.test(model))gc.thinkingConfig={thinkingBudget:0};
+    var body=JSON.stringify({contents:[{role:"user",parts:[{text:prompt}]}],generationConfig:gc});
+    var finished=false;
+    if(opts.signal){opts.signal.addEventListener("abort",function(){if(finished)return;finished=true;reject({code:"cancelled"});});}
+    function handle(code,txt){
+      if(finished)return;finished=true;
+      var j=null;try{j=JSON.parse(txt);}catch(e){}
+      if(code===200&&j){
+        var t="";try{t=j.candidates[0].content.parts.map(function(p){return p.text||"";}).join("");}catch(e){}
+        if(t)resolve({text:t});else reject({code:"empty"});return;
+      }
+      if(code===429)reject({code:"rate"});
+      else if(code===400||code===401||code===403){var m=(j&&j.error&&j.error.message)||"";reject({code:(code!==400||/API key|API_KEY/i.test(m))?"badkey":"server",message:m});}
+      else if(code===404)reject({code:"badmodel"});
+      else if(code<=0)reject({code:"net"});
+      else reject({code:"server"});
+    }
+    if(window.AndroidBridge&&window.AndroidBridge.gemini){
+      var id=++gseq;gpend[id]={done:handle};window.AndroidBridge.gemini(id,model,key,body);
+    }else{
+      fetch("https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent",{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":key},body:body})
+        .then(function(r){return r.text().then(function(t){handle(r.status,t);});}).catch(function(){handle(-1,"");});
+    }
+  });
+}
+function copyFor(code){
+  if(code==="nokey"||code==="badkey")S.sheet=true;
+  var map={nokey:"Pehle Settings mein Gemini API key daalein.",badkey:"Gemini key sahi nahi lag rahi. Settings mein check karein.",badmodel:"Model ka naam sahi nahi. Settings mein gemini-2.5-flash likhein.",rate:"Gemini ne limit laga di. Thori der baad dobara try karein.",net:"Internet nahi chal raha ya Gemini tak nahi pohnch saka.",empty:"Gemini ne khali jawab diya. Dobara dabayein.",server:"Gemini mein masla hai. Thori der baad try karein.",cancelled:""};
+  return code in map?map[code]:"Kuch masla aaya. Dobara try karein.";
+}
+function langRule(){return S.settings.script==="urdu"?"Urdu script (اردو)":"Roman Urdu (Urdu written in English letters, the way people text in Pakistan)";}
+var REPLY_RULES="Reply rules: write the reply the account owner will post under the comment. Use the same language as the commenter (English by default; simple Hinglish for Hindi or Hinglish; Roman Urdu for Urdu). Maximum 15 words, one sentence. Sound like a real person typing on a phone: casual, contractions, no formal praise. Never use phrases like 'Great point', 'Absolutely', 'Thanks for sharing'. No hashtags, no links, no em-dashes. No emoji unless the commenter used one, and then at most one. React to the specific words of the comment. When it fits, end with a short question that keeps the thread going. Never claim personal facts (age, country, job, income, results, credentials) and never invent facts or numbers; if a factual question is beyond what is known, give a modest opinion instead.";
+function buildPrompt(post,parts){
+  var list=parts.map(function(c,i){return (i+1)+") "+c;}).join("\n\n");
+  return "You help the owner of an X (Twitter) account about AI, vibe coding and builders reply to comments quickly. The owner reads Roman Urdu comfortably and English with difficulty.\n\nTHE OWNER'S POST:\n"+post+"\n\nCOMMENTS (numbered):\n"+list+"\n\nFor every comment return one object with:\n- n: the comment number\n- urdu: what the commenter means, in "+langRule()+", short and natural. Mention the tone when it matters (joke, sarcasm, angry, question). If the comment is already Urdu, just restate it simply.\n- reply: the reply to post. "+REPLY_RULES+"\n- skip: true only if the comment is spam, a bot, a link or promo drop, a scam, or abuse; then reply must be an empty string and urdu briefly says why.\n\nReturn ONLY a JSON array, no other text, like [{\"n\":1,\"urdu\":\"...\",\"reply\":\"...\",\"skip\":false}].";
+}
+function parseJSON(t,open,close){var a=t.indexOf(open),b=t.lastIndexOf(close);if(a<0||b<a)throw new Error("parse");return JSON.parse(t.slice(a,b+1));}
+
+function onSend(){
+  if(S.busy)return;
+  var d=$("#draft");if(d)S.draft=d.value;
+  var raw=(S.draft||"").trim();if(!raw)return;
+  if(!sampleFn){S.err="Setup nahi hua.";paintFoot();return;}
+  var p=getPost(S.view.day,S.view.post);if(!p)return;
+  var parts=raw.split(/\n\s*\n/).map(function(s){return s.trim();}).filter(Boolean).slice(0,15).map(function(s){return s.slice(0,900);});
+  S.busy=true;S.err="";ctl=new AbortController();paintFoot();
+  sampleFn(buildPrompt(p.text,parts),{cache:false,signal:ctl.signal,temperature:0}).then(function(r){
+    var arr=parseJSON(r.text,"[","]");
+    p.items=p.items||[];
+    parts.forEach(function(orig,i){
+      var x=arr.find(function(y){return +y.n===i+1;})||arr[i]||{};
+      p.items.push({id:uid(),ts:Date.now(),orig:orig,urdu:String(x.urdu||"(matlab nahi mila)"),reply:String(x.reply||""),skip:!!x.skip,done:false});
+    });
+    S.draft="";saveThread(p);S.scrollEnd=true;
+  }).catch(function(e){
+    S.err=(e&&e.message==="parse")?"Jawab samajh nahi aaya. Dobara dabayein.":copyFor(e&&e.code);
+  }).then(function(){S.busy=false;ctl=null;render();});
+}
+function onRegen(id){
+  if(S.busy)return;
+  var p=getPost(S.view.day,S.view.post);if(!p)return;
+  var it=(p.items||[]).find(function(x){return x.id===id;});if(!it)return;
+  if(!sampleFn){toast("Claude ke andar se kholein");return;}
+  S.busy=true;S.err="";ctl=new AbortController();paintFoot();toast("Naya reply ban raha hai...");
+  var prompt="You help the owner of an X (Twitter) account about AI, vibe coding and builders reply to comments.\n\nTHE OWNER'S POST:\n"+p.text+"\n\nCOMMENT:\n"+it.orig+"\n\nEarlier reply (write a clearly different one): "+(it.reply||"none")+"\n\n"+REPLY_RULES+"\n\nReturn ONLY JSON like {\"reply\":\"...\"}.";
+  sampleFn(prompt,{cache:false,signal:ctl.signal,temperature:0}).then(function(r){
+    var o=parseJSON(r.text,"{","}");
+    it.reply=String(o.reply||it.reply);it.skip=false;saveThread(p);
+  }).catch(function(e){S.err=(e&&e.message==="parse")?"Jawab samajh nahi aaya. Dobara dabayein.":copyFor(e&&e.code);}).then(function(){S.busy=false;ctl=null;render();});
+}
+
+/* ---------- actions ---------- */
+var tt=null;
+function toast(msg){var t=$("#toast");t.textContent=msg;t.className="toast on";clearTimeout(tt);tt=setTimeout(function(){t.className="toast";},1600);}
+function copyText(text,ta){
+  try{if(window.AndroidBridge&&window.AndroidBridge.copy){window.AndroidBridge.copy(text);toast("Copy ho gaya");return;}}catch(e){}
+  function fallback(){try{ta.focus();ta.select();ta.setSelectionRange(0,99999);var ok=document.execCommand&&document.execCommand("copy");toast(ok?"Copy ho gaya":"Text select kar diya, ab copy dabayein");}catch(e){toast("Text select kar diya, ab copy dabayein");}}
+  try{navigator.clipboard.writeText(text).then(function(){toast("Copy ho gaya");},fallback);}catch(e){fallback();}
+}
+function findItem(id){var p=getPost(S.view.day,S.view.post);return {p:p,it:p&&(p.items||[]).find(function(x){return x.id===id;})};}
+
+document.addEventListener("click",function(e){
+  var t=e.target.closest("[data-act]");if(!t)return;
+  if(t.classList.contains("sheetbg")&&e.target!==t)return;
+  var act=t.getAttribute("data-act"),id=t.getAttribute("data-id"),v=S.view;
+  if(act==="back"){var p=parentOf(v);if(p)nav(p,false);}
+  else if(act==="newday"){addDay(false);}
+  else if(act==="openday"){nav({name:"day",day:id});}
+  else if(act==="openpost"){nav({name:"post",day:v.day,post:id});S.scrollEnd=true;render();}
+  else if(act==="addpost"){
+    var ta=$("#newpost"),txt=ta?ta.value.trim():"";if(!txt){toast("Pehle post paste karein");return;}
+    var d=getDay(v.day);d.posts.push({id:uid(),text:txt,created:new Date().toISOString(),items:[]});saveDay(d);render();toast("Post jud gayi");
+  }
+  else if(act==="togglepost"){S.expandPost=!S.expandPost;render();}
+  else if(act==="askdelday"){S.confirm={kind:"day"};render();}
+  else if(act==="askdelpost"){S.confirm={kind:"post"};render();}
+  else if(act==="askdelitem"){S.confirm={kind:"item",id:id};render();}
+  else if(act==="confirmno"){S.confirm=null;render();}
+  else if(act==="confirmyes"){
+    var c=S.confirm;S.confirm=null;
+    if(c.kind==="day"){var dd=getDay(v.day);S.days=S.days.filter(function(x){return x.id!==dd.id;});removeDayRemote(dd);persistLocal();nav({name:"days"},false);}
+    else if(c.kind==="post"){var d2=getDay(v.day),p2=getPost(v.day,v.post);d2.posts=d2.posts.filter(function(x){return x.id!==p2.id;});removePostRemote(p2);saveDay(d2);nav({name:"day",day:v.day},false);}
+    else{var f=findItem(c.id);f.p.items=f.p.items.filter(function(x){return x.id!==c.id;});saveThread(f.p);render();}
+  }
+  else if(act==="copy"){
+    var card=t.closest(".replybox");var ta2=card.querySelector(".reply");copyText(ta2.value,ta2);
+  }
+  else if(act==="regen"){onRegen(id);}
+  else if(act==="done"){var g=findItem(id);if(g.it){g.it.done=!g.it.done;saveThread(g.p);render();}}
+  else if(act==="send"){onSend();}
+  else if(act==="stop"){if(ctl)ctl.abort();}
+  else if(act==="settings"){S.sheet=true;render();}
+  else if(act==="closesheet"){S.sheet=false;render();}
+  else if(act==="setscript"){S.settings.script=t.getAttribute("data-v");saveSettings();render();}
+  else if(act==="savegem"){var k=$("#gkey"),m=$("#gmodel");var cc=cfg();if(k&&k.value.trim())cc.key=k.value.trim();if(m&&m.value.trim())cc.model=m.value.trim();saveCfg(cc);S.sheet=false;S.err="";render();toast("Save ho gaya");}
+});
+function saveSettings(){try{localStorage.setItem(LS_SET,JSON.stringify(S.settings));}catch(e){}}
+document.addEventListener("input",function(e){
+  var t=e.target;
+  if(t.id==="draft"){S.draft=t.value;autosize(t,140);}
+  else if(t.getAttribute&&t.getAttribute("data-act-input")==="reply"){autosize(t);var f=findItem(t.getAttribute("data-id"));if(f.it){f.it.reply=t.value;clearTimeout(pend.__r);pend.__r=setTimeout(function(){saveThread(f.p);},500);}}
+});
+document.addEventListener("focusin",function(e){if(e.target.id==="draft"){setTimeout(function(){var m=$("#main");m.scrollTop=m.scrollHeight;},250);}});
+
+/* keep the composer above the Android keyboard */
+function fit(){try{var vv=window.visualViewport;$("#app").style.height=(vv?vv.height:window.innerHeight)+"px";}catch(e){}}
+try{if(window.visualViewport){window.visualViewport.addEventListener("resize",fit);window.visualViewport.addEventListener("scroll",fit);}fit();}catch(e){}
+
+render();
+initStore();
+setTimeout(function(){finishInit();},12000);
+})();
+</script>
+
+</body></html>
