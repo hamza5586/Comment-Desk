@@ -3,6 +3,8 @@ on:
   push:
     branches: [main, master]
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -16,7 +18,13 @@ jobs:
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
       - name: Build debug APK
         run: ./gradlew assembleDebug --no-daemon
+      - name: Rename APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk CommentDesk.apk
       - uses: actions/upload-artifact@v4
         with:
           name: CommentDesk-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: CommentDesk.apk
+      - name: Publish APK as a GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "apk-${{ github.run_number }}" CommentDesk.apk --title "Comment Desk APK build ${{ github.run_number }}" --notes "Download CommentDesk.apk below and install it on Android." --latest
